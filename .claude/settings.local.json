@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)",
+      "Read(//c/Users/peter.czaholi/.claude/**)",
+      "Bash(grep:*)",
+      "Bash(dotnet --version)",
+      "Bash(ng version:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm install:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet nuget list:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet tool:*)",
+      "Bash(mkdir -p /tmp/efinstall)",
+      "Read(//tmp/**)",
+      "Bash(export PATH=\"$PATH:$HOME/.dotnet/tools\")",
+      "Bash(xargs cat:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet add:*)"
+    ]
+  }
+}
