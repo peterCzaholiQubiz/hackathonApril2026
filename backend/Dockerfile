@@ -9,9 +9,6 @@ COPY src/PortfolioThermometer.Core/PortfolioThermometer.Core.csproj             
 COPY src/PortfolioThermometer.Infrastructure/PortfolioThermometer.Infrastructure.csproj     src/PortfolioThermometer.Infrastructure/
 COPY src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj                           src/PortfolioThermometer.Api/
 COPY src/PortfolioThermometer.Seeder/PortfolioThermometer.Seeder.csproj                     src/PortfolioThermometer.Seeder/
-COPY tests/PortfolioThermometer.Core.Tests/PortfolioThermometer.Core.Tests.csproj           tests/PortfolioThermometer.Core.Tests/
-COPY tests/PortfolioThermometer.Infrastructure.Tests/PortfolioThermometer.Infrastructure.Tests.csproj tests/PortfolioThermometer.Infrastructure.Tests/
-COPY tests/PortfolioThermometer.Api.Tests/PortfolioThermometer.Api.Tests.csproj             tests/PortfolioThermometer.Api.Tests/
 
 RUN dotnet restore PortfolioThermometer.sln
 
