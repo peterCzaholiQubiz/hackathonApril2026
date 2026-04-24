@@ -24,7 +24,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Non-root user for security
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 USER appuser
 
 COPY --from=build /app/publish .
