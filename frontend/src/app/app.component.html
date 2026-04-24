@@ -1,0 +1,33 @@
+<div class="app-shell">
+  <nav class="sidebar">
+    <div class="sidebar__logo">
+      <span class="sidebar__logo-icon">&#x1F321;</span>
+      <span class="sidebar__logo-text">Portfolio<br>Thermometer</span>
+    </div>
+
+    <ul class="sidebar__nav">
+      <li>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="sidebar__link">
+          <span class="sidebar__link-icon">&#x1F4CA;</span>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a routerLink="/customers" routerLinkActive="active" class="sidebar__link">
+          <span class="sidebar__link-icon">&#x1F465;</span>
+          Customers
+        </a>
+      </li>
+      <li>
+        <a routerLink="/risk-groups" routerLinkActive="active" class="sidebar__link">
+          <span class="sidebar__link-icon">&#x26A0;</span>
+          Risk Groups
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <main class="main-content">
+    <router-outlet />
+  </main>
+</div>

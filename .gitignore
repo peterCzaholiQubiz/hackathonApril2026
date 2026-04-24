@@ -1,0 +1,254 @@
+## C# / .NET ##
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+Generated\ Files/
+*.pidb
+*.svclog
+*.scc
+_Chutzpah*
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.e2e
+$tf/
+*.gpState
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+_TeamCity*
+*.dotCover
+.axoCover/*
+!.axoCover/settings.json
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+*.mm.*
+AutoTest.Net/
+.sass-cache/
+[Ee]xpress/
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2/
+DocProject/Help/html/
+publish/
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+PublishScripts/
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+csx/
+*.build.csdef
+ecf/
+rcf/
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.appxupload
+*.[Cc]ache
+!?*.[Cc]ache/
+ClientBin/
+~$*
+*~
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+Generated_Code/
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.XML
+UpgradeLog*.htm
+ServiceFabricBackup/
+*.rptproj.bak
+*.mdf
+*.ldf
+*.ndf
+*.rdl.data
+*.bim.layout
+*.bim_*.settings
+*.rptproj.rsuser
+*- [Bb]ackup.rdl
+*- [Bb]ackup ([0-9]).rdl
+*- [Bb]ackup ([0-9][0-9]).rdl
+FakesAssemblies/
+*.GhostDoc.xml
+.ncrunchsolution
+*.psess
+*.vsp
+*.vspx
+.localhistory/
+.history/
+healthchecksdb
+MigrationBackup/
+.ionide/
+FodyWeavers.xsd
+*.tar.gz
+
+## Angular ##
+node_modules/
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/coverage
+/.angular/cache
+.angular/
+*.js.map
+!src/**/*.js
+*.d.ts
+!src/**/*.d.ts
+
+## Angular test artifacts ##
+/src/test-results/
+
+## IDEs and editors ##
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+## Miscellaneous ##
+/.sass-cache
+/connect.lock
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+## System files ##
+.DS_Store
+Thumbs.db
+
+## Environment files ##
+.env
+.env.local
+.env.*.local
+!.env.example
+crm-data/ArchievingSolution/\[Confidential] Look-up Customer Data_1.csv
+crm-data/ArchievingSolution/\[Confidential] Look-up Customer Data_2.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Contract Price.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_1.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_2.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_3.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_4.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_5.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_6.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_7.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Meter Read_8.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Price Proposition.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - CaptarCode.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - ConnectionType.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - EnergyDeliveryStatus.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - PhysicalStatus.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - Profile.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - ResidentialFunction.csv
+crm-data/ArchievingSolution/Generic/\[Confidential] Timeslices - UsageType.csv
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Atrias - Allocation Data - BE.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] DTN Data Integration.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Dynamic Profiles Data Integration.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] NL MeterRead Validations report.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] NL Refinitiv process.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] NL Solar and Wind Forecast.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Notes on Position Overview.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Position Overview Gas NL.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Tennet - Allocation Data - NL.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] Tennet Data - Telemetry & Allocation.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] UK Imbalance Calculations.pdf
+crm-data/DevOps/WikiPages/BITeam/\[Confidential] UK Overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Atrias allocation.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] AWP - Functional overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] AWP - Technical overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Broker commissions functionality overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] BRP functional overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Downtimes Portal architectural overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Downtimes Portal functional overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] ETRM Nomination Integration.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] eZ Integration.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Invoice configurations.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Invoice documents.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Invoice management (screens).pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] NominationToolFunctionalOverview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Payt invoice data.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Period and Final bill generation.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Quote tool functionality overview.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Sector calendar.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Settlement prices.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Sia Temperature API.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Signals.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Tennet allocation.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Tennet Imbalance data.pdf
+crm-data/DevOps/WikiPages/DevTeam/\[Confidential] Validation rules.pdf
+crm-data/ERPSQLServer/\[Confidential] \[ValueAQuery] ASU001.csv
+crm-data/ERPSQLServer/\[Confidential] \[ValueAQuery] CPY001.csv
+crm-data/ERPSQLServer/\[Confidential] \[ValueAQuery] DQE - Captars.csv
+crm-data/ERPSQLServer/\[Confidential] \[ValueAQuery] DQE - Prijzen v5 met Organization.csv
+crm-data/ERPSQLServer/\[Confidential] \[ValueAQuery] ERPMRE.csv
+crm-data/ERPSQLServer/\[Confidential] ConnectionContacts.csv
+crm-data/ERPSQLServer/\[Confidential] ConnectionMeterReads.csv
+crm-data/ERPSQLServer/\[Confidential] Connections.csv
+crm-data/ERPSQLServer/\[Confidential] ConnectionTypes.csv
+crm-data/ERPSQLServer/\[Confidential] Contract-Customer-Connection-BrokerDebtor.csv
+crm-data/ERPSQLServer/\[Confidential] Contracts.csv
+crm-data/ERPSQLServer/\[Confidential] LastConnectionContacts.csv
+crm-data/ERPSQLServer/\[Confidential] OrganizationContacts.csv
+crm-data/ERPSQLServer/\[Confidential] Organizations.csv
+crm-data/ERPSQLServer/\[Confidential] OrganizationTypes.csv
+crm-data/ERPSQLServer/\[Confidential] ProductTypes.csv

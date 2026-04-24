@@ -19,7 +19,8 @@
       "Bash(export PATH=\"$PATH:$HOME/.dotnet/tools\")",
       "Bash(xargs cat:*)",
       "Bash(dotnet test:*)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(dotnet sln *)"
     ]
   }
 }

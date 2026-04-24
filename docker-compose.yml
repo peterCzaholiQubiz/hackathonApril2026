@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio_thermometer}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - thermometer_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-portfolio_thermometer}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-portfolio_thermometer};Username=postgres;Password=${POSTGRES_PASSWORD}
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY}
+      CrmDataPath: /data/crm-data
+    volumes:
+      - ./crm-data:/data/crm-data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - thermometer_net
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - thermometer_net
+
+volumes:
+  postgres_data:
+
+networks:
+  thermometer_net:
+    driver: bridge
