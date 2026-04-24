@@ -59,6 +59,11 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "allowedHosts": [
+              "generous-embrace-production.up.railway.app"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "portfolio-thermometer:build:production"
