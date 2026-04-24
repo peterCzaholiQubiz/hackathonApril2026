@@ -3,14 +3,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
 # Copy solution and project files first for layer caching
-COPY PortfolioThermometer.sln ./
 COPY nuget.config ./
 COPY src/PortfolioThermometer.Core/PortfolioThermometer.Core.csproj                         src/PortfolioThermometer.Core/
 COPY src/PortfolioThermometer.Infrastructure/PortfolioThermometer.Infrastructure.csproj     src/PortfolioThermometer.Infrastructure/
 COPY src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj                           src/PortfolioThermometer.Api/
-COPY src/PortfolioThermometer.Seeder/PortfolioThermometer.Seeder.csproj                     src/PortfolioThermometer.Seeder/
 
-RUN dotnet restore PortfolioThermometer.sln
+RUN dotnet restore src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj
 
 # Copy remaining source files
 COPY . .
