@@ -13,6 +13,7 @@ import { ExplanationPanelComponent } from './explanation-panel/explanation-panel
 import { ActionsPanelComponent } from './actions-panel/actions-panel.component';
 import { CustomerTimelineComponent } from './customer-timeline/customer-timeline.component';
 import { CustomerConsumptionCardComponent } from './customer-consumption-card/customer-consumption-card.component';
+import { ComplaintsBoardComponent } from './complaints-board/complaints-board.component';
 
 @Component({
   selector: 'app-customer-detail',
@@ -27,6 +28,7 @@ import { CustomerConsumptionCardComponent } from './customer-consumption-card/cu
     ActionsPanelComponent,
     CustomerTimelineComponent,
     CustomerConsumptionCardComponent,
+    ComplaintsBoardComponent,
   ],
   template: `
     <div class="detail-page">
@@ -83,6 +85,10 @@ import { CustomerConsumptionCardComponent } from './customer-consumption-card/cu
           }
 
           <app-customer-consumption-card [customerId]="customer.id" />
+
+          <section class="card card--complaints">
+            <app-complaints-board [complaints]="complaints" />
+          </section>
 
           <div class="detail-page__bottom">
             <section class="card card--actions">
@@ -185,6 +191,7 @@ import { CustomerConsumptionCardComponent } from './customer-consumption-card/cu
       border-radius: var(--radius-lg);
       padding: 24px 28px;
 
+      &--complaints { min-width: 0; }
       &--actions { min-width: 0; }
       &--timeline { min-width: 0; }
       &--empty-state { min-width: 0; }
