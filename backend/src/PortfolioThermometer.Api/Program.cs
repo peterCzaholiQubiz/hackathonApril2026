@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using PortfolioThermometer.Api.Middleware;
 using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Infrastructure.Data;
@@ -8,8 +9,7 @@ using PortfolioThermometer.Infrastructure.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Database ──────────────────────────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+var connectionString = ResolveConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -82,3 +82,65 @@ if (app.Environment.IsDevelopment())
 }
 
 await app.RunAsync();
+
+static string ResolveConnectionString(ConfigurationManager configuration)
+{
+    var databaseUrl = configuration["DATABASE_URL"];
+
+    if (!string.IsNullOrWhiteSpace(databaseUrl))
+        return ToNpgsqlConnectionString(databaseUrl);
+
+    return configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "Database connection is not configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
+}
+
+static string ToNpgsqlConnectionString(string databaseUrl)
+{
+    if (!Uri.TryCreate(databaseUrl, UriKind.Absolute, out var uri))
+        return databaseUrl;
+
+    if (!string.Equals(uri.Scheme, "postgres", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(uri.Scheme, "postgresql", StringComparison.OrdinalIgnoreCase))
+    {
+        return databaseUrl;
+    }
+
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : string.Empty,
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+        SslMode = SslMode.Prefer
+    };
+
+    if (!string.IsNullOrWhiteSpace(uri.Query))
+    {
+        var queryParameters = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var queryParameter in queryParameters)
+        {
+            var parts = queryParameter.Split('=', 2);
+            if (parts.Length != 2)
+                continue;
+
+            var key = Uri.UnescapeDataString(parts[0]);
+            var value = Uri.UnescapeDataString(parts[1]);
+
+            if (string.Equals(key, "sslmode", StringComparison.OrdinalIgnoreCase)
+                && Enum.TryParse<SslMode>(value, true, out var sslMode))
+            {
+                builder.SslMode = sslMode;
+                continue;
+            }
+
+            builder[key] = value;
+        }
+    }
+
+    return builder.ConnectionString;
+}
