@@ -134,7 +134,7 @@ FodyWeavers.xsd
 
 ## Angular ##
 node_modules/
-/dist
+dist/
 /tmp
 /out-tsc
 /bazel-out
