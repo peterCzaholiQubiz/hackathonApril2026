@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Data Structure — Dutch Energy Sector</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2e3250;
+    --text: #e2e4f0;
+    --muted: #6b7280;
+    --blue: #4f8ef7;
+    --blue-dim: #1e2f5c;
+    --green: #34d399;
+    --green-dim: #0d3325;
+    --orange: #fb923c;
+    --orange-dim: #3a1f0e;
+    --purple: #a78bfa;
+    --purple-dim: #2a1f4a;
+    --teal: #2dd4bf;
+    --teal-dim: #0d2f2c;
+    --pink: #f472b6;
+    --pink-dim: #3a1027;
+    --yellow: #fbbf24;
+    --yellow-dim: #3a2b0a;
+    --red: #f87171;
+    --red-dim: #3a1010;
+  }
+
+  /* ── Light mode ───────────────────────────────────────── */
+  body[data-theme="light"] {
+    --bg: #f4f6fb;
+    --surface: #ffffff;
+    --surface2: #edf0f7;
+    --border: #d0d5e8;
+    --text: #1a1d2e;
+    --muted: #566079;
+    --blue: #2563eb;
+    --blue-dim: #dbeafe;
+    --green: #059669;
+    --green-dim: #d1fae5;
+    --orange: #c2600a;
+    --orange-dim: #fef3c7;
+    --purple: #6d28d9;
+    --purple-dim: #ede9fe;
+    --teal: #0d9488;
+    --teal-dim: #ccfbf1;
+    --pink: #be185d;
+    --pink-dim: #fce7f3;
+    --yellow: #92400e;
+    --yellow-dim: #fef9c3;
+    --red: #dc2626;
+    --red-dim: #fee2e2;
+  }
+  body[data-theme="light"] .hero {
+    background: linear-gradient(135deg, #edf0f7 0%, #f4f6fb 50%, #edf0f7 100%);
+  }
+  body[data-theme="light"] .hero p { color: var(--muted); }
+  body[data-theme="light"] .nav {
+    background: rgba(244,246,251,0.95);
+  }
+  body[data-theme="light"] .nav a { color: var(--muted); }
+  body[data-theme="light"] .nav a:hover { color: var(--text); }
+  body[data-theme="light"] .nav a.active { color: var(--blue); }
+
+  /* ── Theme toggle button ──────────────────────────────── */
+  .theme-toggle {
+    margin-left: auto;
+    flex-shrink: 0;
+    align-self: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    line-height: 1.6;
+  }
+  .theme-toggle:hover { background: var(--surface2); border-color: var(--blue); color: var(--blue); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Hero ─────────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 40px 40px;
+    text-align: center;
+  }
+  .hero-label {
+    display: inline-block;
+    background: var(--blue-dim);
+    color: var(--blue);
+    border: 1px solid var(--blue);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 700px;
+    margin: 0 auto 32px;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Nav ──────────────────────────────────────────────── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,17,23,0.95);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .nav a {
+    padding: 12px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .nav a:hover { color: var(--text); text-decoration: none; border-color: var(--border); }
+  .nav a.active { color: var(--blue); border-color: var(--blue); }
+
+  /* ── Layout ───────────────────────────────────────────── */
+  .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
+  .section { margin-bottom: 64px; }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    color: var(--muted);
+    margin-bottom: 28px;
+    font-size: 13px;
+  }
+
+  /* ── Legend ───────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ── ER Diagram ───────────────────────────────────────── */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+    min-height: 540px;
+    user-select: none;
+  }
+  .diagram-wrap:active { cursor: grabbing; }
+  .mermaid {
+    display: inline-block;
+    padding: 32px;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  /* ── Zoom controls ────────────────────────────────────── */
+  .zoom-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+  }
+  .zoom-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .zoom-btn:hover { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .zoom-hint {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* ── Entity grid ──────────────────────────────────────── */
+  .entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+    gap: 28px;
+  }
+
+  .entity-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .entity-card:hover { border-color: var(--blue); }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .card-icon {
+    font-size: 30px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .card-meta { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+  .card-file {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: monospace;
+  }
+  .card-badge {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+
+  .card-body { padding: 20px 28px 24px; }
+  .card-desc {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    line-height: 1.7;
+  }
+
+  /* badge colors */
+  .badge-core    { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
+  .badge-lookup  { background: var(--surface2);   color: var(--muted);  border: 1px solid var(--border); }
+  .badge-contact { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
+  .badge-price   { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+  .badge-meter   { background: var(--purple-dim); color: var(--purple); border: 1px solid var(--purple); }
+  .badge-time    { background: var(--teal-dim);   color: var(--teal);   border: 1px solid var(--teal); }
+  .badge-report  { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+  .badge-archive { background: var(--pink-dim);   color: var(--pink);   border: 1px solid var(--pink); }
+
+  /* field table */
+  .field-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .field-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    padding: 0 8px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .field-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(46,50,80,0.5);
+    vertical-align: top;
+  }
+  .field-table tr:last-child td { border-bottom: none; }
+  .field-name { font-family: monospace; font-size: 13px; font-weight: 600; }
+  .field-type { color: var(--muted); font-size: 13px; }
+  .field-note { color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .tag-pk  { background: var(--blue-dim);   color: var(--blue);   font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+  .tag-fk  { background: var(--teal-dim);   color: var(--teal);   font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+  .tag-key { background: var(--orange-dim); color: var(--orange); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+  .tag-multi { background: var(--pink-dim); color: var(--pink);   font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+
+  /* relationships */
+  .card-rels { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .rel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+  .rel-list  { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rel-chip  {
+    font-size: 13px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  /* group separators */
+  .group-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin: 32px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Scroll smooth ─────────────────────────────────────── */
+  html { scroll-behavior: smooth; }
+
+  /* ── Mermaid override ─────────────────────────────────── */
+  .mermaid svg { max-width: none; height: auto; display: block; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Dutch Energy Sector CRM</div>
+  <h1>Data Structure Reference</h1>
+  <p>Pseudonymised export from an ERP/CRM system. Personal identifiers, EAN codes, and free-text fields are replaced with stable hash tokens — joins still work, originals cannot be recovered.</p>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">35</div><div class="stat-label">CSV Files</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Folders</div></div>
+    <div class="stat"><div class="stat-num">17</div><div class="stat-label">Logical Entities</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">Domains</div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#er-diagram">ER Diagram</a>
+  <a href="#core">Core CRM</a>
+  <a href="#contacts">Contacts</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#meters">Meter Data</a>
+  <a href="#timeslices">Timeslices</a>
+  <a href="#reporting">Reporting</a>
+  <a href="#archive">Invoice Archive</a>
+  <a href="#lookup">Lookup Tables</a>
+  <button class="theme-toggle" id="theme-toggle" title="Switch to light mode">☀️ Light</button>
+</nav>
+
+<div class="container">
+
+  <!-- ER DIAGRAM -->
+  <div class="section" id="er-diagram">
+    <div class="section-title">Entity Relationship Diagram</div>
+    <div class="section-desc">Core relationships between logical entities. Many-to-many via the reporting join table. EAN is the universal key linking connections to all time-sliced and meter-read data.</div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div> Core CRM</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div> Contacts</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div> Pricing</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div> Meter Data</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div> Timeslices &amp; Tariffs</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div> Reporting</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div> Invoice Archive</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> Lookup</div>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoom-in"    title="Zoom in">+</button>
+        <button class="zoom-btn" id="zoom-out"   title="Zoom out">−</button>
+        <button class="zoom-btn" id="zoom-reset" title="Reset zoom" style="font-size:14px">⊡</button>
+      </div>
+      <div class="zoom-hint">Scroll to zoom · Drag to pan</div>
+      <div class="mermaid">
+erDiagram
+    ORGANIZATION_TYPE {
+        int OrganizationTypeId PK
+        string Description
+        string PresentationDescription
+    }
+    ORGANIZATION {
+        int OrganizationId PK
+        int OrganizationTypeId FK
+        string DebtorReference
+        string Name
+    }
+    CONNECTION_TYPE {
+        int ConnectionTypeId PK
+        string Description
+        string PresentationDescription
+    }
+    PRODUCT_TYPE {
+        int ProductId PK
+        string Description
+    }
+    CONTRACT {
+        int ContractId PK
+        int ProductId FK
+        string ContractReference
+        string ContractType
+        date StartDate
+        date EndDate
+        decimal CurrentAgreedAmount
+    }
+    CONNECTION {
+        int ConnectionId PK
+        int ConnectionTypeId FK
+        string EAN
+        string ProductType
+        string DeliveryType
+    }
+    ORGANIZATION_CONTACT {
+        int OrganizationId FK
+        int ContactId
+        date ContactDate
+        string Subject
+        string Report
+    }
+    CONNECTION_CONTACT {
+        int ConnectionId FK
+        int ContactId
+        date ContactDate
+        string Subject
+        string Report
+    }
+    CONTRACT_PRICE {
+        string ContractUniqueIdentifier FK
+        date StartDate
+        date EndDate
+        decimal Price
+        string Description
+    }
+    PRICE_PROPOSITION {
+        string ContractUniqueIdentifier FK
+        date StartDate
+        date EndDate
+        decimal Price
+        string Description
+    }
+    METER_READ {
+        string EANUniqueIdentifier FK
+        date StartDate
+        date EndDate
+        decimal Consumption
+        decimal Position
+        string UsageType
+        string Direction
+        string Quality
+    }
+    CONNECTION_METER_READ {
+        int ConnectionId FK
+        int UsageID
+        date StartDate
+        date EndDate
+        decimal Consumption
+        string UsageType
+        string Direction
+        string Unit
+    }
+    TIMESLICE {
+        string EANUniqueIdentifier FK
+        date StartDate
+        date EndDate
+        string Description
+    }
+    DQE_CAPTARS {
+        int ConnectionId FK
+        date StartDate
+        date EndDate
+        string CaptarCode
+        decimal AmountYear
+        decimal VATpc
+    }
+    DQE_PRIJZEN {
+        int ConnectionId FK
+        int ContractId FK
+        decimal Price
+        string ComponentDescription
+        date StartDate
+        date EndDate
+    }
+    ERPMRE {
+        int ConnectionId FK
+        int MeterReadingId
+        string EAN FK
+        string MeterType
+        decimal Amount
+        string UsageType
+        string Direction
+    }
+    ASU001 {
+        int ConnectionId FK
+        string EAN FK
+        decimal EAEnergyConsumptionNettedPeak
+        decimal EAEnergyConsumptionNettedOffPeak
+        date ValidStartDate
+        date ValidEndDate
+    }
+    CPY001 {
+        int ConnectionId FK
+        string Description
+        string ConnectionPropertyValue
+        string ConnectionPropertyGroup
+    }
+    REPORTING_JOIN {
+        string EAN FK
+        int ConnectionId FK
+        int ContractID FK
+        string CustomerNumber FK
+        string BrokerNumber
+        string DebtorNumber
+    }
+    INVOICE_ARCHIVE {
+        string CollectiveName
+        string CustomerNumber FK
+        string DebtorNumber
+        string InvoiceNumber
+        string FileLocation
+    }
+
+    ORGANIZATION_TYPE ||--o{ ORGANIZATION : "classifies"
+    CONNECTION_TYPE ||--o{ CONNECTION : "classifies"
+    PRODUCT_TYPE ||--o{ CONTRACT : "classifies"
+    ORGANIZATION ||--o{ ORGANIZATION_CONTACT : "has contacts"
+    ORGANIZATION ||--o{ REPORTING_JOIN : "customer in"
+    CONNECTION ||--o{ CONNECTION_CONTACT : "has contacts"
+    CONNECTION ||--o{ REPORTING_JOIN : "appears in"
+    CONTRACT ||--o{ REPORTING_JOIN : "covered by"
+    CONTRACT ||--o{ CONTRACT_PRICE : "has price lines"
+    CONTRACT ||--o{ PRICE_PROPOSITION : "has tariffs"
+    CONTRACT ||--o{ DQE_PRIJZEN : "priced via"
+    CONNECTION ||--o{ METER_READ : "meter history"
+    CONNECTION ||--o{ CONNECTION_METER_READ : "aggregated reads"
+    CONNECTION ||--o{ TIMESLICE : "status history"
+    CONNECTION ||--o{ DQE_CAPTARS : "tariff classification"
+    CONNECTION ||--o{ DQE_PRIJZEN : "price history"
+    CONNECTION ||--o{ ERPMRE : "read events"
+    CONNECTION ||--o{ ASU001 : "annual usage"
+    CONNECTION ||--o{ CPY001 : "properties"
+    ORGANIZATION ||--o{ INVOICE_ARCHIVE : "invoiced to"
+      </div>
+    </div>
+  </div>
+
+  <!-- CORE CRM -->
+  <div class="section" id="core">
+    <div class="section-title">Core CRM Entities</div>
+    <div class="section-desc">The master records that anchor all other data. Organizations are parties (customers, brokers, collectives). Contracts bind organizations to energy products. Connections are the physical delivery points (EAN codes).</div>
+    <div class="entity-grid">
+
+      <!-- Organizations -->
+      <div class="entity-card" id="card-organizations">
+        <div class="card-header">
+          <div class="card-icon">🏢</div>
+          <div class="card-meta">
+            <div class="card-name">Organizations</div>
+            <div class="card-file">ERPSQLServer/Organizations.csv</div>
+          </div>
+          <span class="card-badge badge-core">Core</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Master table of every party in the system — customers, collectives (multi-site groups), deal counterparties, brokers, and head organisations. The primary anchor for all contract, contact, and invoice data. Names are pseudonymised hash tokens.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">OrganizationId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique party identifier</td></tr>
+            <tr><td class="field-name">OrganizationTypeId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ OrganizationTypes. 2=Customer, 5=Collective, 6=Company, 7=Broker</td></tr>
+            <tr><td class="field-name">DebtorReference</td><td class="field-type">string</td><td class="field-note">External accounting key; nullable</td></tr>
+            <tr><td class="field-name">Name</td><td class="field-type">string</td><td class="field-note">Pseudonymised hash</td></tr>
+            <tr><td class="field-name">UserNameModified</td><td class="field-type">string</td><td class="field-note">Audit: last modifier</td></tr>
+            <tr><td class="field-name">TransStartDate</td><td class="field-type">datetime</td><td class="field-note">Record creation / onboarding timestamp</td></tr>
+          </table>
+          <div class="card-rels">
+            <div class="rel-title">Related to</div>
+            <div class="rel-list">
+              <span class="rel-chip">→ OrganizationTypes</span>
+              <span class="rel-chip">→ Contracts (via join)</span>
+              <span class="rel-chip">→ OrganizationContacts</span>
+              <span class="rel-chip">→ InvoiceArchive</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contracts -->
+      <div class="entity-card" id="card-contracts">
+        <div class="card-header">
+          <div class="card-icon">📄</div>
+          <div class="card-meta">
+            <div class="card-name">Contracts</div>
+            <div class="card-file">ERPSQLServer/Contracts.csv</div>
+          </div>
+          <span class="card-badge badge-core">Core</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Contract master data — one row per contract record. Includes both long-running customer contracts (ContractType="Customer") and their sub-period derivatives (ContractType="Period"). EndDate of 9999-12-31 means open-ended. CurrentAgreedAmount is the monetary value of the contract.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ContractId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique contract ID</td></tr>
+            <tr><td class="field-name">ContractType</td><td class="field-type">string</td><td class="field-note">"Customer" | "Period"</td></tr>
+            <tr><td class="field-name">ContractReference</td><td class="field-type">string</td><td class="field-note">Human-readable contract reference code</td></tr>
+            <tr><td class="field-name">ProductId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ ProductTypes. 1=Electricity, 2=Gas</td></tr>
+            <tr><td class="field-name">StartDate</td><td class="field-type">date</td><td class="field-note">Contract start</td></tr>
+            <tr><td class="field-name">EndDate</td><td class="field-type">date</td><td class="field-note">9999-12-31 = open-ended</td></tr>
+            <tr><td class="field-name">CurrentAgreedAmount</td><td class="field-type">decimal</td><td class="field-note">Contract monetary value (EUR)</td></tr>
+            <tr><td class="field-name">UserComment</td><td class="field-type">string</td><td class="field-note">Free-text annotation</td></tr>
+          </table>
+          <div class="card-rels">
+            <div class="rel-title">Related to</div>
+            <div class="rel-list">
+              <span class="rel-chip">→ ProductTypes</span>
+              <span class="rel-chip">→ ContractPrice</span>
+              <span class="rel-chip">→ PriceProposition</span>
+              <span class="rel-chip">→ DQE-Prijzen</span>
+              <span class="rel-chip">→ ReportingJoin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connections -->
+      <div class="entity-card" id="card-connections">
+        <div class="card-header">
+          <div class="card-icon">⚡</div>
+          <div class="card-meta">
+            <div class="card-name">Connections</div>
+            <div class="card-file">ERPSQLServer/Connections.csv</div>
+          </div>
+          <span class="card-badge badge-core">Core</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Master table of every physical energy connection point — one row per metering point. The EAN (European Article Number) is the 18-digit code that uniquely identifies each electricity or gas delivery point in the Dutch/Belgian grid. DeliveryType distinguishes supply (LDN) from return-feed (ODN — e.g. solar panels).</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Internal connection identifier</td></tr>
+            <tr><td class="field-name">EAN<span class="tag-key">KEY</span></td><td class="field-type">string</td><td class="field-note">Pseudonymised 18-digit grid code. Universal join key to all timeslice/meter files</td></tr>
+            <tr><td class="field-name">ProductType</td><td class="field-type">string</td><td class="field-note">"Electricity" | "Gas"</td></tr>
+            <tr><td class="field-name">DeliveryType</td><td class="field-type">string</td><td class="field-note">"LDN" (supply) | "ODN" (return/feed-in) | "NA"</td></tr>
+            <tr><td class="field-name">ConnectionTypeId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ ConnectionTypes (CHP, WindTurbine, MainConnection…)</td></tr>
+            <tr><td class="field-name">Description</td><td class="field-type">string</td><td class="field-note">Pseudonymised</td></tr>
+            <tr><td class="field-name">ClientReference</td><td class="field-type">string</td><td class="field-note">Customer's own reference code</td></tr>
+          </table>
+          <div class="card-rels">
+            <div class="rel-title">Related to</div>
+            <div class="rel-list">
+              <span class="rel-chip">→ ConnectionTypes</span>
+              <span class="rel-chip">→ MeterRead 1–8</span>
+              <span class="rel-chip">→ ConnectionMeterReads</span>
+              <span class="rel-chip">→ All Timeslices</span>
+              <span class="rel-chip">→ DQE-Captars</span>
+              <span class="rel-chip">→ DQE-Prijzen</span>
+              <span class="rel-chip">→ ERPMRE</span>
+              <span class="rel-chip">→ ASU001</span>
+              <span class="rel-chip">→ CPY001</span>
+              <span class="rel-chip">→ ReportingJoin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONTACTS -->
+  <div class="section" id="contacts">
+    <div class="section-title">Contact &amp; Interaction History</div>
+    <div class="section-desc">Records of every interaction between the supplier and their customers or connections. Subject field carries semantic value (e.g. "Cancellation" is a churn signal). Free-text report fields are pseudonymised hashes.</div>
+    <div class="entity-grid">
+
+      <!-- OrganizationContacts -->
+      <div class="entity-card" id="card-orgcontacts">
+        <div class="card-header">
+          <div class="card-icon">💬</div>
+          <div class="card-meta">
+            <div class="card-name">OrganizationContacts</div>
+            <div class="card-file">ERPSQLServer/OrganizationContacts.csv</div>
+          </div>
+          <span class="card-badge badge-contact">Contact</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Denormalised join of every organisation with its full contact/interaction history. Left columns repeat organisation fields; right columns add one interaction per row. Used for churn analysis — declining contact frequency and "Cancellation" subjects are strong churn signals.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">OrganizationId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Organizations</td></tr>
+            <tr><td class="field-name">OrganizationContactId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique contact record</td></tr>
+            <tr><td class="field-name">ContactDate</td><td class="field-type">datetime</td><td class="field-note">When the interaction occurred</td></tr>
+            <tr><td class="field-name">Subject</td><td class="field-type">string</td><td class="field-note">General | Cancellation | Modification | MeasureData</td></tr>
+            <tr><td class="field-name">ContactPerson</td><td class="field-type">string</td><td class="field-note">Pseudonymised</td></tr>
+            <tr><td class="field-name">ContactPersonType</td><td class="field-type">string</td><td class="field-note">"Person" | "PersonId"</td></tr>
+            <tr><td class="field-name">Report</td><td class="field-type">string</td><td class="field-note">Pseudonymised free-text hash</td></tr>
+            <tr><td class="field-name">ValidStartDate / ValidEndDate</td><td class="field-type">date</td><td class="field-note">Validity window of the contact record</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ConnectionContacts -->
+      <div class="entity-card" id="card-conncontacts">
+        <div class="card-header">
+          <div class="card-icon">🔌</div>
+          <div class="card-meta">
+            <div class="card-name">ConnectionContacts</div>
+            <div class="card-file">ERPSQLServer/ConnectionContacts.csv</div>
+          </div>
+          <span class="card-badge badge-contact">Contact</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Same structure as OrganizationContacts but scoped to the connection (EAN) level rather than the organisation. Captures meter-related interactions, modification requests, and service events at the physical delivery point.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">ConnectionContactId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique contact record</td></tr>
+            <tr><td class="field-name">ContactDate</td><td class="field-type">datetime</td><td class="field-note">Interaction date</td></tr>
+            <tr><td class="field-name">Subject</td><td class="field-type">string</td><td class="field-note">General | Cancellation | MeasureData | Modification</td></tr>
+            <tr><td class="field-name">Report</td><td class="field-type">string</td><td class="field-note">Pseudonymised free-text hash</td></tr>
+            <tr><td class="field-name">ProductId</td><td class="field-type">int</td><td class="field-note">Energy product involved</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- LastConnectionContacts -->
+      <div class="entity-card" id="card-lastcontacts">
+        <div class="card-header">
+          <div class="card-icon">📌</div>
+          <div class="card-meta">
+            <div class="card-name">LastConnectionContacts</div>
+            <div class="card-file">ERPSQLServer/LastConnectionContacts.csv</div>
+          </div>
+          <span class="card-badge badge-contact">Contact</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Convenience view — only the most-recent contact entry per connection (Volgorde=1). Used for quick "last touched" lookups without scanning the full ConnectionContacts history. Useful for identifying connections with no recent outbound contact.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">connectionid<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">contactid</td><td class="field-type">int</td><td class="field-note">Contact record ID</td></tr>
+            <tr><td class="field-name">contactdate</td><td class="field-type">datetime</td><td class="field-note">Most recent interaction date</td></tr>
+            <tr><td class="field-name">subject</td><td class="field-type">string</td><td class="field-note">Interaction category</td></tr>
+            <tr><td class="field-name">report</td><td class="field-type">string</td><td class="field-note">Pseudonymised hash</td></tr>
+            <tr><td class="field-name">Volgorde</td><td class="field-type">int</td><td class="field-note">Rank; always 1 in this view</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="section" id="pricing">
+    <div class="section-title">Pricing</div>
+    <div class="section-desc">Three complementary files that together reconstruct the full price book applied to each contract: agreed contract tariffs, catalogue proposition tariffs, and the full historical price-component ledger per connection.</div>
+    <div class="entity-grid">
+
+      <!-- Contract Price -->
+      <div class="entity-card" id="card-contractprice">
+        <div class="card-header">
+          <div class="card-icon">💰</div>
+          <div class="card-meta">
+            <div class="card-name">Contract Price</div>
+            <div class="card-file">ArchievingSolution/Generic/Contract Price.csv</div>
+          </div>
+          <span class="card-badge badge-price">Pricing</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">The specific price lines actually agreed with a customer in a contract — the tariffs the customer really pays. Each row is one price component (delivery, standing charge, surcharge) valid for a date range. Descriptions are in Dutch, e.g. "Vaste Prijs LDN Gas G1".</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ContractUniqueIdentifier<span class="tag-fk">FK</span></td><td class="field-type">string</td><td class="field-note">→ Contracts.ContractReference</td></tr>
+            <tr><td class="field-name">StartDate</td><td class="field-type">date</td><td class="field-note">Price validity start</td></tr>
+            <tr><td class="field-name">EndDate</td><td class="field-type">date</td><td class="field-note">99991231 = open-ended</td></tr>
+            <tr><td class="field-name">Price</td><td class="field-type">decimal</td><td class="field-note">Unit varies by component (€/kWh, €/m³, €/year)</td></tr>
+            <tr><td class="field-name">Description</td><td class="field-type">string</td><td class="field-note">Dutch label, e.g. "Vaste Prijs LDN Gas G1", "Opslag Hoog Resultaat"</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Price Proposition -->
+      <div class="entity-card" id="card-priceproposition">
+        <div class="card-header">
+          <div class="card-icon">🏷️</div>
+          <div class="card-meta">
+            <div class="card-name">Price Proposition</div>
+            <div class="card-file">ArchievingSolution/Generic/Price Proposition.csv</div>
+          </div>
+          <span class="card-badge badge-price">Pricing</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Catalogue/proposition tariffs — the "standard offer" prices belonging to the commercial product under which a contract was sold. Compare with Contract Price to see discounts or deviations from catalogue. Same schema as Contract Price. Used by auditors to reconcile invoices.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ContractUniqueIdentifier<span class="tag-fk">FK</span></td><td class="field-type">string</td><td class="field-note">→ Contracts.ContractReference</td></tr>
+            <tr><td class="field-name">StartDate</td><td class="field-type">date</td><td class="field-note">Validity start</td></tr>
+            <tr><td class="field-name">EndDate</td><td class="field-type">date</td><td class="field-note">99991231 = open-ended</td></tr>
+            <tr><td class="field-name">Price</td><td class="field-type">decimal</td><td class="field-note">Catalogue tariff</td></tr>
+            <tr><td class="field-name">Description</td><td class="field-type">string</td><td class="field-note">Dutch label, e.g. "Vaste Prijs Vastrecht Gas"</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- DQE Prijzen -->
+      <div class="entity-card" id="card-dqeprijzen">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-meta">
+            <div class="card-name">DQE — Price Components</div>
+            <div class="card-file">ERPSQLServer/[ValueAQuery] DQE - Prijzen v5 met Organization.csv</div>
+          </div>
+          <span class="card-badge badge-price">Pricing</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Full price-component history per connection and contract, joined with the organisation that owns the proposition. Captures every tariff and tax line (REB energy tax, heffingskorting, delivery, standing charge) with its validity period. The most granular pricing table — used to reconstruct the exact price book applied at any point in time.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">ContractId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Contracts</td></tr>
+            <tr><td class="field-name">Price</td><td class="field-type">decimal</td><td class="field-note">Component price</td></tr>
+            <tr><td class="field-name">PriceComponentId</td><td class="field-type">int</td><td class="field-note">Component identifier</td></tr>
+            <tr><td class="field-name">ComponentDescription</td><td class="field-type">string</td><td class="field-note">e.g. "ID_REBElectricity", "ID_TaxCreditElectricity"</td></tr>
+            <tr><td class="field-name">ComponentPresentationDescription</td><td class="field-type">string</td><td class="field-note">Dutch UI label, e.g. "REB Elektriciteit"</td></tr>
+            <tr><td class="field-name">StartDate / EndDate</td><td class="field-type">date</td><td class="field-note">Validity window</td></tr>
+            <tr><td class="field-name">Type</td><td class="field-type">string</td><td class="field-note">e.g. "Propositie"</td></tr>
+            <tr><td class="field-name">Name</td><td class="field-type">string</td><td class="field-note">Supplying organisation name</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- METER DATA -->
+  <div class="section" id="meters">
+    <div class="section-title">Meter &amp; Consumption Data</div>
+    <div class="section-desc">Four related datasets capturing energy consumption at different granularities. Meter Read 1–8 and ConnectionMeterReads are the primary consumption sources. ERPMRE is the lowest-level event fact table. ASU001 holds the official annual standard usage figures.</div>
+    <div class="entity-grid">
+
+      <!-- Meter Read 1-8 -->
+      <div class="entity-card" id="card-meterread">
+        <div class="card-header">
+          <div class="card-icon">🔢</div>
+          <div class="card-meta">
+            <div class="card-name">Meter Read <span class="tag-multi">× 8 files</span></div>
+            <div class="card-file">ArchievingSolution/Generic/Meter Read_1.csv … _8.csv</div>
+          </div>
+          <span class="card-badge badge-meter">Meter</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Full meter-reading history per EAN across 8 split files (split for volume). Each row records a metered quantity for a period. Dual-tariff electricity meters produce two rows per period (UsageLow=off-peak, UsageHigh=peak). Direction distinguishes grid supply from solar feed-in. All 8 files have identical schema and must be scanned together.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">EANUniqueIdentifier<span class="tag-fk">FK</span></td><td class="field-type">string</td><td class="field-note">→ Connections.EAN</td></tr>
+            <tr><td class="field-name">StartDate / EndDate</td><td class="field-type">date</td><td class="field-note">Period covered by this reading</td></tr>
+            <tr><td class="field-name">Consumption</td><td class="field-type">decimal</td><td class="field-note">Delta consumption over the period</td></tr>
+            <tr><td class="field-name">Position / PreviousPosition</td><td class="field-type">decimal</td><td class="field-note">Raw meter counter values at end/start of period</td></tr>
+            <tr><td class="field-name">Source</td><td class="field-type">string</td><td class="field-note">"DVEP" | "Customer" | grid operator</td></tr>
+            <tr><td class="field-name">Quality</td><td class="field-type">string</td><td class="field-note">"Estimated" | "Customer" | "Actual"</td></tr>
+            <tr><td class="field-name">UsageType</td><td class="field-type">string</td><td class="field-note">"UsageLow" (off-peak) | "UsageHigh" (peak)</td></tr>
+            <tr><td class="field-name">Direction</td><td class="field-type">string</td><td class="field-note">"Consumption" | "Production" (solar feed-in)</td></tr>
+            <tr><td class="field-name">MeterIdentifier</td><td class="field-type">string</td><td class="field-note">Physical meter serial number</td></tr>
+            <tr><td class="field-name">MeterFactor</td><td class="field-type">decimal</td><td class="field-note">CT multiplier for scaled meters</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ConnectionMeterReads -->
+      <div class="entity-card" id="card-connmeterreads">
+        <div class="card-header">
+          <div class="card-icon">📈</div>
+          <div class="card-meta">
+            <div class="card-name">ConnectionMeterReads</div>
+            <div class="card-file">ERPSQLServer/ConnectionMeterReads.csv</div>
+          </div>
+          <span class="card-badge badge-meter">Meter</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Aggregated meter reading records per connection — simpler than Meter Read 1–8, joined on ConnectionId rather than EAN. Includes Unit (kWh for electricity, m3 for gas) and ReadingDate. The recommended starting point for consumption analysis before diving into the full 8-file history.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">UsageID<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique reading record</td></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">MeterID</td><td class="field-type">int</td><td class="field-note">Physical meter identifier</td></tr>
+            <tr><td class="field-name">ReadingDate</td><td class="field-type">date</td><td class="field-note">Date the reading was taken</td></tr>
+            <tr><td class="field-name">Consumption</td><td class="field-type">decimal</td><td class="field-note">Delta consumption</td></tr>
+            <tr><td class="field-name">UsageType</td><td class="field-type">string</td><td class="field-note">e.g. "CorrectedUsageGas"</td></tr>
+            <tr><td class="field-name">Direction</td><td class="field-type">string</td><td class="field-note">"Consumption" | "Production"</td></tr>
+            <tr><td class="field-name">Unit</td><td class="field-type">string</td><td class="field-note">"kWh" | "m3"</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ERPMRE -->
+      <div class="entity-card" id="card-erpmre">
+        <div class="card-header">
+          <div class="card-icon">🗂️</div>
+          <div class="card-meta">
+            <div class="card-name">ERPMRE — Meter Read Events</div>
+            <div class="card-file">ERPSQLServer/[ValueAQuery] ERPMRE.csv</div>
+          </div>
+          <span class="card-badge badge-meter">Meter</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">The lowest-level meter fact table — one row per metered quantity per individual read event. Includes kWmax (peak demand) in addition to standard usage types. Source of record for both normal consumption and peak-demand values. Amount can be negative for production (solar). This is the largest table in the dataset.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">MeterReadingId</td><td class="field-type">int</td><td class="field-note">Meter reading session</td></tr>
+            <tr><td class="field-name">MeterPositionId</td><td class="field-type">int</td><td class="field-note">Position within reading</td></tr>
+            <tr><td class="field-name">MeterNumber</td><td class="field-type">string</td><td class="field-note">Pseudonymised meter serial</td></tr>
+            <tr><td class="field-name">Factor</td><td class="field-type">decimal</td><td class="field-note">CT multiplier</td></tr>
+            <tr><td class="field-name">Amount</td><td class="field-type">decimal</td><td class="field-note">Measured value; negative = production</td></tr>
+            <tr><td class="field-name">usg_quality</td><td class="field-type">string</td><td class="field-note">"Estimated" | "Measured" | "Customer"</td></tr>
+            <tr><td class="field-name">UsageType</td><td class="field-type">string</td><td class="field-note">"UsageLow" | "UsageHigh" | "kWmax"</td></tr>
+            <tr><td class="field-name">sts_description</td><td class="field-type">string</td><td class="field-note">Status description</td></tr>
+            <tr><td class="field-name">src_description</td><td class="field-type">string</td><td class="field-note">Source system, e.g. "ECH"</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ASU001 -->
+      <div class="entity-card" id="card-asu001">
+        <div class="card-header">
+          <div class="card-icon">📅</div>
+          <div class="card-meta">
+            <div class="card-name">ASU001 — Annual Standard Usage</div>
+            <div class="card-file">ERPSQLServer/[ValueAQuery] ASU001.csv</div>
+          </div>
+          <span class="card-badge badge-meter">Meter</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Official SJV (Standaard Jaar Verbruik) values per EAN — the annual standard usage figures required by the Dutch market for balance reconciliation. Split into four components: peak/off-peak on both consumption and production sides. Used by balance-responsible parties to estimate hourly consumption for unmetered connections.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionAnnualStandardUsageId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique record</td></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">ValidStartDate / ValidEndDate</td><td class="field-type">date</td><td class="field-note">Validity period of this SJV value</td></tr>
+            <tr><td class="field-name">EAEnergyConsumptionNettedOffPeak</td><td class="field-type">decimal</td><td class="field-note">Annual off-peak consumption (kWh)</td></tr>
+            <tr><td class="field-name">EAEnergyConsumptionNettedPeak</td><td class="field-type">decimal</td><td class="field-note">Annual peak consumption (kWh)</td></tr>
+            <tr><td class="field-name">EAEnergyProductionNettedOffPeak</td><td class="field-type">decimal</td><td class="field-note">Annual off-peak feed-in</td></tr>
+            <tr><td class="field-name">EAEnergyProductionNettedPeak</td><td class="field-type">decimal</td><td class="field-note">Annual peak feed-in</td></tr>
+            <tr><td class="field-name">AnnualStandardUsageDate</td><td class="field-type">date</td><td class="field-note">Date the SJV was established</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TIMESLICES -->
+  <div class="section" id="timeslices">
+    <div class="section-title">Timeslices &amp; Network Tariff History</div>
+    <div class="section-desc">All time-sliced history tables share the same 4-column schema: EANUniqueIdentifier, StartDate, EndDate, Description. They record how a connection's classification changed over time. DQE-Captars is richer — it stores the full network tariff breakdown for each classification period.</div>
+    <div class="entity-grid">
+
+      <!-- Timeslices grouped -->
+      <div class="entity-card" id="card-timeslices">
+        <div class="card-header">
+          <div class="card-icon">⏱️</div>
+          <div class="card-meta">
+            <div class="card-name">Timeslices <span class="tag-multi">× 7 files</span></div>
+            <div class="card-file">ArchievingSolution/Generic/Timeslices - *.csv</div>
+          </div>
+          <span class="card-badge badge-time">Timeslice</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Seven files, all with identical schema, each recording a different classification dimension for each EAN over time. All use StartDate/EndDate validity windows. Key files for risk scoring:</div>
+          <table class="field-table">
+            <tr><th>File</th><th>Description field contains</th></tr>
+            <tr><td class="field-name">CaptarCode</td><td class="field-note">Grid-operator tariff category (affects regulated charges)</td></tr>
+            <tr><td class="field-name">ConnectionType</td><td class="field-note">"Levering" (supply) | "Teruglevering" (solar return)</td></tr>
+            <tr><td class="field-name">EnergyDeliveryStatus</td><td class="field-note">"Aangesloten" (live) | "Afgesloten" (disconnected)</td></tr>
+            <tr><td class="field-name">PhysicalStatus</td><td class="field-note">"In bedrijf" (operational) | "In aanleg" (under construction)</td></tr>
+            <tr><td class="field-name">Profile</td><td class="field-note">Load profile code (1A, 1B, 2A, 3A, 4A…) for unmetered allocation</td></tr>
+            <tr><td class="field-name">ResidentialFunction</td><td class="field-note">Dwelling classification — drives VAT and regulated tariff applicability</td></tr>
+            <tr><td class="field-name">UsageType</td><td class="field-note">"Kleinverbruik" (small, regulated) | "Grootverbruik" (large, negotiated)</td></tr>
+          </table>
+          <div style="margin-top:12px">
+            <table class="field-table">
+              <tr><th>Shared schema field</th><th>Notes</th></tr>
+              <tr><td class="field-name">EANUniqueIdentifier<span class="tag-fk">FK</span></td><td class="field-note">→ Connections.EAN</td></tr>
+              <tr><td class="field-name">StartDate / EndDate</td><td class="field-note">Validity window; 9999-12-31 = current</td></tr>
+              <tr><td class="field-name">Description</td><td class="field-note">Dutch label for the classification value</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DQE Captars -->
+      <div class="entity-card" id="card-captars">
+        <div class="card-header">
+          <div class="card-icon">🏗️</div>
+          <div class="card-meta">
+            <div class="card-name">DQE — Captars (Network Tariffs)</div>
+            <div class="card-file">ERPSQLServer/[ValueAQuery] DQE - Captars.csv</div>
+          </div>
+          <span class="card-badge badge-time">Timeslice</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Rich time-sliced history linking each EAN to its Captar (tariff classification) code and to the specific grid-operator (Netbeheerder) tariff components in force for each sub-period. Includes the full breakdown of network tariff amounts — used to reconstruct what the grid operator charged for each connection in each period.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">CaptarContractId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique Captar record</td></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">CaptarCode / EanCaptarCode</td><td class="field-type">string</td><td class="field-note">Tariff classification codes</td></tr>
+            <tr><td class="field-name">NBCode</td><td class="field-type">string</td><td class="field-note">Grid operator (Netbeheerder) code</td></tr>
+            <tr><td class="field-name">FysicalStatus / FysicalStatusDescription</td><td class="field-type">string</td><td class="field-note">e.g. "In bedrijf"</td></tr>
+            <tr><td class="field-name">ContractModel / ContractModelDescription</td><td class="field-type">string</td><td class="field-note">e.g. "Leveranciersmodel"</td></tr>
+            <tr><td class="field-name">AmountYear / AmountDay / AmountAPYear…</td><td class="field-type">decimal</td><td class="field-note">Network tariff amount components</td></tr>
+            <tr><td class="field-name">AmountCaptar / ConnectionService / MeterRent / SystemService / FixedCharge</td><td class="field-type">decimal</td><td class="field-note">Tariff sub-components</td></tr>
+            <tr><td class="field-name">VATpc</td><td class="field-type">decimal</td><td class="field-note">VAT percentage applicable</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- CPY001 -->
+      <div class="entity-card" id="card-cpy001">
+        <div class="card-header">
+          <div class="card-icon">🔧</div>
+          <div class="card-meta">
+            <div class="card-name">CPY001 — Connection Properties</div>
+            <div class="card-file">ERPSQLServer/[ValueAQuery] CPY001.csv</div>
+          </div>
+          <span class="card-badge badge-time">Timeslice</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Generic time-sliced property store for connections — one row per property per validity period. Stores extensible key-value pairs for each EAN, grouped by property family (e.g. "CHP" for combined heat and power properties). Used for connection-level metadata that doesn't fit the standard schema.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">ConnectionConnectionPropertyId<span class="tag-pk">PK</span></td><td class="field-type">int</td><td class="field-note">Unique property record</td></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">ValidStartDate / ValidEndDate</td><td class="field-type">date</td><td class="field-note">Validity window</td></tr>
+            <tr><td class="field-name">ConnectionPropertyTypeId</td><td class="field-type">int</td><td class="field-note">Property type key</td></tr>
+            <tr><td class="field-name">Description</td><td class="field-type">string</td><td class="field-note">Property type key, e.g. "StandardCost"</td></tr>
+            <tr><td class="field-name">PresentationDescription</td><td class="field-type">string</td><td class="field-note">Dutch label, e.g. "Standaard kostprijs"</td></tr>
+            <tr><td class="field-name">ConnectionPropertyValue</td><td class="field-type">string</td><td class="field-note">The property value</td></tr>
+            <tr><td class="field-name">ConnectionPropertyGroup</td><td class="field-note">string</td><td class="field-note">Property family, e.g. "CHP"</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- REPORTING -->
+  <div class="section" id="reporting">
+    <div class="section-title">Reporting &amp; Cross-Entity Joins</div>
+    <div class="section-desc">Flattened join tables pre-computed for reporting. These denormalize multi-table joins into single rows, answering "which customer was behind this EAN under this contract, through which broker, billed to which debtor" without requiring complex joins at query time.</div>
+    <div class="entity-grid">
+
+      <!-- Contract-Customer-Connection-BrokerDebtor -->
+      <div class="entity-card" id="card-reportjoin">
+        <div class="card-header">
+          <div class="card-icon">🔗</div>
+          <div class="card-meta">
+            <div class="card-name">Contract–Customer–Connection–BrokerDebtor</div>
+            <div class="card-file">ERPSQLServer/Contract-Customer-Connection-BrokerDebtor.csv</div>
+          </div>
+          <span class="card-badge badge-report">Reporting</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">The primary reporting join. One row per contract-per-connection, answering: which customer held this EAN under which contract, via which broker, billed to which debtor, between these dates. Names are pseudonymised. Essential for linking Organizations (by OrganizationId) to Contracts and Connections, since no direct FK exists between them.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">EAN<span class="tag-fk">FK</span></td><td class="field-type">string</td><td class="field-note">→ Connections.EAN</td></tr>
+            <tr><td class="field-name">ConnectionId<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Connections</td></tr>
+            <tr><td class="field-name">ContractID<span class="tag-fk">FK</span></td><td class="field-type">int</td><td class="field-note">→ Contracts</td></tr>
+            <tr><td class="field-name">ContractNumber</td><td class="field-type">string</td><td class="field-note">Human-readable contract reference</td></tr>
+            <tr><td class="field-name">StartDate / EndDate</td><td class="field-type">date</td><td class="field-note">Period this row is valid</td></tr>
+            <tr><td class="field-name">Market</td><td class="field-type">string</td><td class="field-note">"Electricity" | "Gas"</td></tr>
+            <tr><td class="field-name">CustomerNumber</td><td class="field-type">string</td><td class="field-note">Links to Organizations (type=Customer)</td></tr>
+            <tr><td class="field-name">CustomerName</td><td class="field-type">string</td><td class="field-note">Pseudonymised</td></tr>
+            <tr><td class="field-name">BrokerNumber / BrokerName</td><td class="field-type">string</td><td class="field-note">Intermediary broker; pseudonymised</td></tr>
+            <tr><td class="field-name">DebtorNumber / DebtorName</td><td class="field-type">string</td><td class="field-note">Legal billing party; pseudonymised</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- INVOICE ARCHIVE -->
+  <div class="section" id="archive">
+    <div class="section-title">Invoice Archive Index</div>
+    <div class="section-desc">Two-part index mapping each archived invoice to the folder on the archive drive where its supporting documents live. Split purely because of row volume — both files have identical columns and must be scanned together for any invoice lookup.</div>
+    <div class="entity-grid">
+
+      <!-- Look-up Customer Data -->
+      <div class="entity-card" id="card-invoicearchive">
+        <div class="card-header">
+          <div class="card-icon">🗃️</div>
+          <div class="card-meta">
+            <div class="card-name">Look-up Customer Data <span class="tag-multi">× 2 files</span></div>
+            <div class="card-file">ArchievingSolution/Look-up Customer Data_1.csv + _2.csv</div>
+          </div>
+          <span class="card-badge badge-archive">Archive</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">The primary entry point when locating physical invoice documents for a specific invoice, debtor, or customer. The "Collective name" is a hashed group key used to keep related parties together. Both files must be searched — they are a continuous index split at a row boundary. No invoice amounts or dates are stored here; this is purely a location index.</div>
+          <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+            <tr><td class="field-name">Collective name</td><td class="field-type">string</td><td class="field-note">Hashed group key; links related parties. Joins across files work.</td></tr>
+            <tr><td class="field-name">Customer number<span class="tag-fk">FK</span></td><td class="field-type">string</td><td class="field-note">→ Organizations (type=Customer) via CustomerNumber</td></tr>
+            <tr><td class="field-name">Debtor number</td><td class="field-type">string</td><td class="field-note">Legal billing party (one customer can have multiple debtors over time)</td></tr>
+            <tr><td class="field-name">Invoice number<span class="tag-key">KEY</span></td><td class="field-type">string</td><td class="field-note">Invoice identifier — primary lookup key</td></tr>
+            <tr><td class="field-name">File location</td><td class="field-type">string</td><td class="field-note">Full path on archive drive, e.g. T:\Archive data\Debtor\29355\1908981</td></tr>
+          </table>
+          <div class="card-rels">
+            <div class="rel-title">Note</div>
+            <div class="rel-list">
+              <span class="rel-chip">Scan both files for complete results</span>
+              <span class="rel-chip">No amount / date columns</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LOOKUP TABLES -->
+  <div class="section" id="lookup">
+    <div class="section-title">Lookup / Reference Tables</div>
+    <div class="section-desc">Small enumeration tables used as foreign key targets. Stable — rarely changes. All follow the same pattern: an ID, an English code (Description), and a Dutch UI label (PresentationDescription).</div>
+    <div class="entity-grid">
+
+      <!-- OrganizationTypes -->
+      <div class="entity-card" id="card-orgtypes">
+        <div class="card-header">
+          <div class="card-icon">📋</div>
+          <div class="card-meta">
+            <div class="card-name">OrganizationTypes</div>
+            <div class="card-file">ERPSQLServer/OrganizationTypes.csv</div>
+          </div>
+          <span class="card-badge badge-lookup">Lookup</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Enumerates the kinds of legal/commercial parties the system knows about. Used to filter Organizations — for risk scoring, typically filter to OrganizationTypeId=2 (Customer).</div>
+          <table class="field-table">
+            <tr><th>ID</th><th>Description</th><th>PresentationDescription</th></tr>
+            <tr><td class="field-name">1</td><td class="field-type">HeadOrganization</td><td class="field-note">Hoofdorganisatie</td></tr>
+            <tr><td class="field-name">2</td><td class="field-type">Customer</td><td class="field-note">Klant ← use for risk scoring</td></tr>
+            <tr><td class="field-name">3</td><td class="field-type">DealCounterparty</td><td class="field-note">—</td></tr>
+            <tr><td class="field-name">5</td><td class="field-type">Collective</td><td class="field-note">Collectief</td></tr>
+            <tr><td class="field-name">6</td><td class="field-type">Company</td><td class="field-note">—</td></tr>
+            <tr><td class="field-name">7</td><td class="field-type">Broker</td><td class="field-note">—</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ProductTypes -->
+      <div class="entity-card" id="card-producttypes">
+        <div class="card-header">
+          <div class="card-icon">⚡</div>
+          <div class="card-meta">
+            <div class="card-name">ProductTypes</div>
+            <div class="card-file">ERPSQLServer/ProductTypes.csv</div>
+          </div>
+          <span class="card-badge badge-lookup">Lookup</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Enumerates the energy commodities sold. Used as FK on Contracts to indicate whether a contract covers electricity or gas supply.</div>
+          <table class="field-table">
+            <tr><th>ID</th><th>Description</th><th>PresentationDescription</th></tr>
+            <tr><td class="field-name">1</td><td class="field-type">Electricity</td><td class="field-note">Elektriciteit</td></tr>
+            <tr><td class="field-name">2</td><td class="field-type">Gas</td><td class="field-note">Gas</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ConnectionTypes -->
+      <div class="entity-card" id="card-conntypes">
+        <div class="card-header">
+          <div class="card-icon">🔩</div>
+          <div class="card-meta">
+            <div class="card-name">ConnectionTypes</div>
+            <div class="card-file">ERPSQLServer/ConnectionTypes.csv</div>
+          </div>
+          <span class="card-badge badge-lookup">Lookup</span>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">Enumerates the physical purpose of a connection — what kind of installation is behind the meter. Used to distinguish standard supply points from specialised generation assets.</div>
+          <table class="field-table">
+            <tr><th>ID</th><th>Description</th><th>PresentationDescription</th></tr>
+            <tr><td class="field-name">1</td><td class="field-type">CHP</td><td class="field-note">WKK (combined heat and power)</td></tr>
+            <tr><td class="field-name">2</td><td class="field-type">Biomass</td><td class="field-note">Biomassa</td></tr>
+            <tr><td class="field-name">3</td><td class="field-type">WindTurbine</td><td class="field-note">Windmolen</td></tr>
+            <tr><td class="field-name">4</td><td class="field-type">Lighting</td><td class="field-note">Belichting</td></tr>
+            <tr><td class="field-name">5</td><td class="field-type">OwnUsage</td><td class="field-note">Eigen verbr.</td></tr>
+            <tr><td class="field-name">6</td><td class="field-type">FlexibleUsage</td><td class="field-note">Flex. Verm.</td></tr>
+            <tr><td class="field-name">100</td><td class="field-type">MainConnection</td><td class="field-note">Hoofdaansluiting ← most common</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>CRM Data Structure Reference — Dutch Energy Sector · hackathonApril2026</div>
+    <div>All personal identifiers pseudonymised. Numeric values &amp; dates preserved as-is.</div>
+  </div>
+
+</div>
+
+<script>
+  // Capture diagram source before Mermaid replaces the div content
+  const _mermaidSrc = document.querySelector('#er-diagram .mermaid').textContent;
+
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#1a1d27',
+      primaryColor: '#1e2f5c',
+      primaryTextColor: '#e2e4f0',
+      primaryBorderColor: '#4f8ef7',
+      lineColor: '#4f8ef7',
+      secondaryColor: '#232736',
+      tertiaryColor: '#0d3325',
+      edgeLabelBackground: '#1a1d27',
+      fontFamily: 'Segoe UI, system-ui, -apple-system, sans-serif',
+      fontSize: '16px'
+    },
+    er: {
+      diagramPadding: 50,
+      layoutDirection: 'TB',
+      minEntityWidth: 280,
+      minEntityHeight: 130,
+      entityPadding: 28,
+      useMaxWidth: false
+    }
+  });
+
+  // ── ER Diagram pan / zoom ──────────────────────────────
+  (function () {
+    const wrap      = document.querySelector('#er-diagram .diagram-wrap');
+    const mermaidEl = document.querySelector('#er-diagram .mermaid');
+
+    let scale = 0.75, tx = 0, ty = 20;
+    let panning = false, ox = 0, oy = 0;
+    let lastDist = null;
+
+    function apply(animated) {
+      mermaidEl.style.transition = animated ? 'transform 0.2s ease' : 'none';
+      mermaidEl.style.transform  = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+
+    function center() {
+      const svg = wrap.querySelector('svg');
+      if (!svg) return;
+      svg.style.maxWidth = 'none';
+      svg.style.height = 'auto';
+      scale = 0.75;
+      const wrapW = wrap.clientWidth;
+      const svgW  = svg.getBoundingClientRect().width / scale;
+      tx = Math.max(16, (wrapW - svgW * scale) / 2);
+      ty = 20;
+      apply(false);
+    }
+    window._erCenter = center;
+
+    // Wait for Mermaid to inject the SVG
+    const mo = new MutationObserver(() => {
+      if (wrap.querySelector('svg')) { mo.disconnect(); center(); }
+    });
+    mo.observe(mermaidEl, { childList: true, subtree: true });
+
+    // Wheel zoom toward cursor
+    wrap.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect   = wrap.getBoundingClientRect();
+      const mx     = e.clientX - rect.left;
+      const my     = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.12 : 0.893;
+      const ns     = Math.max(0.2, Math.min(6, scale * factor));
+      tx = mx - (mx - tx) * (ns / scale);
+      ty = my - (my - ty) * (ns / scale);
+      scale = ns;
+      apply(false);
+    }, { passive: false });
+
+    // Mouse drag
+    wrap.addEventListener('mousedown', e => {
+      if (e.target.closest('.zoom-controls')) return;
+      panning = true; ox = e.clientX - tx; oy = e.clientY - ty;
+      wrap.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', e => {
+      if (!panning) return;
+      tx = e.clientX - ox; ty = e.clientY - oy; apply(false);
+    });
+    window.addEventListener('mouseup', () => {
+      if (!panning) return; panning = false; wrap.style.cursor = 'grab';
+    });
+
+    // Touch drag + pinch
+    wrap.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        panning = true; ox = e.touches[0].clientX - tx; oy = e.touches[0].clientY - ty;
+      } else if (e.touches.length === 2) {
+        lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                              e.touches[0].clientY - e.touches[1].clientY);
+      }
+    }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (e.touches.length === 1 && panning) {
+        tx = e.touches[0].clientX - ox; ty = e.touches[0].clientY - oy; apply(false);
+      } else if (e.touches.length === 2 && lastDist) {
+        const d  = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                              e.touches[0].clientY - e.touches[1].clientY);
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - wrap.getBoundingClientRect().left;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - wrap.getBoundingClientRect().top;
+        const ns = Math.max(0.2, Math.min(6, scale * (d / lastDist)));
+        tx = cx - (cx - tx) * (ns / scale);
+        ty = cy - (cy - ty) * (ns / scale);
+        scale = ns; lastDist = d; apply(false);
+      }
+    }, { passive: false });
+    wrap.addEventListener('touchend', () => { panning = false; lastDist = null; });
+
+    // Button controls
+    function zoomBy(factor) {
+      const cx = wrap.clientWidth / 2, cy = wrap.clientHeight / 2;
+      const ns = Math.max(0.2, Math.min(6, scale * factor));
+      tx = cx - (cx - tx) * (ns / scale);
+      ty = cy - (cy - ty) * (ns / scale);
+      scale = ns; apply(true);
+    }
+    document.getElementById('zoom-in')   .addEventListener('click', () => zoomBy(1.3));
+    document.getElementById('zoom-out')  .addEventListener('click', () => zoomBy(0.77));
+    document.getElementById('zoom-reset').addEventListener('click', () => { scale = 0.75; apply(true); setTimeout(center, 10); });
+  })();
+
+  // Active nav on scroll
+  const sections = document.querySelectorAll('.section');
+  const navLinks = document.querySelectorAll('.nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`.nav a[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.2 });
+  sections.forEach(s => observer.observe(s));
+
+  // ── Theme toggle ───────────────────────────────────────
+  (function () {
+    const btn = document.getElementById('theme-toggle');
+
+    const darkVars = {
+      background: '#1a1d27', primaryColor: '#1e2f5c',
+      primaryTextColor: '#e2e4f0', primaryBorderColor: '#4f8ef7',
+      lineColor: '#4f8ef7', secondaryColor: '#232736',
+      tertiaryColor: '#0d3325', edgeLabelBackground: '#1a1d27',
+      fontFamily: 'Segoe UI, system-ui, -apple-system, sans-serif', fontSize: '16px'
+    };
+    const lightVars = {
+      primaryColor: '#dbeafe', primaryTextColor: '#1a1d2e',
+      primaryBorderColor: '#2563eb', lineColor: '#2563eb',
+      secondaryColor: '#f4f6fb', tertiaryColor: '#d1fae5',
+      edgeLabelBackground: '#ffffff',
+      fontFamily: 'Segoe UI, system-ui, -apple-system, sans-serif', fontSize: '16px'
+    };
+    const erConfig = {
+      diagramPadding: 50, layoutDirection: 'TB',
+      minEntityWidth: 280, minEntityHeight: 130,
+      entityPadding: 28, useMaxWidth: false
+    };
+
+    async function rerenderDiagram(dark) {
+      const div = document.querySelector('#er-diagram .mermaid');
+      div.textContent = _mermaidSrc;
+      div.removeAttribute('data-processed');
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: dark ? 'dark' : 'default',
+        themeVariables: dark ? darkVars : lightVars,
+        er: erConfig
+      });
+      await mermaid.run({ querySelector: '#er-diagram .mermaid' });
+      setTimeout(() => { if (window._erCenter) window._erCenter(); }, 250);
+    }
+
+    async function apply(dark, rerender) {
+      document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+      btn.textContent = dark ? '☀️ Light' : '🌙 Dark';
+      btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      localStorage.setItem('pt-theme', dark ? 'dark' : 'light');
+      if (rerender) await rerenderDiagram(dark);
+    }
+
+    // Restore saved preference; default dark (initial render already dark)
+    const saved = localStorage.getItem('pt-theme');
+    if (saved === 'light') apply(false, true);
+    else apply(true, false);
+
+    btn.addEventListener('click', () => {
+      const nowDark = document.body.getAttribute('data-theme') !== 'light';
+      apply(!nowDark, true);
+    });
+  })();
+</script>
+
+</body>
+</html>

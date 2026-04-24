@@ -2,7 +2,7 @@
 
 **Agent**: `general-purpose`  
 **Phase**: 2 — Risk Engine  
-**Status**: TODO  
+**Status**: DONE  
 **Depends on**: Prompt 04 (risk scoring engine)
 
 ---

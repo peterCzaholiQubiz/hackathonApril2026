@@ -3,13 +3,19 @@
 ## High-Level Component Diagram
 
 ```
-+-----------------------------+
-|      CRM Source (Read-Only) |
-|   (DVEP DB / CSV Export)    |
-+-------------+---------------+
-              |
-              | one-way read (DB connection or file read)
-              | NEVER writes back
++----------------------------------------------+
+|       CRM Source — crm-data/ (Read-Only)     |
+|  Pseudonymised Dutch energy-sector CSV files |
+|  ERPSQLServer/: Organizations, Contracts,    |
+|    Connections, Contacts, MeterReads,        |
+|    Prices, Captars, ASU, lookup tables       |
+|  ArchievingSolution/: Invoice archive index, |
+|    Contract/Proposition prices, Meter Read   |
+|    1–8, Timeslices (CaptarCode, Profile …)   |
++--------------------+--------------------------+
+                     |
+                     | one-way file read (UTF-8 BOM stripped)
+                     | NEVER writes back
               v
 +------------------------------------------------------+
 |               .NET 10 Backend (ASP.NET Core)         |
@@ -128,7 +134,7 @@ Standalone single-page application served statically. Communicates exclusively t
 
 | Integration | Direction | Protocol | Constraints |
 |-------------|-----------|----------|-------------|
-| CRM Source -> Backend | One-way read | DB connection (ADO.NET) or file system (CSV) | Read-only; never mutates CRM data |
+| CRM Source -> Backend | One-way read | File system — `crm-data/` CSV files (UTF-8 BOM, comma-delimited) | Read-only; never mutates source files |
 | Backend -> PostgreSQL | Read/write | EF Core via Npgsql | Local analytics DB; all writes happen here |
 | Backend -> Claude API | Request/response | HTTPS REST | Batched (10/batch), throttled (5 concurrent), cached results |
 | Backend -> Angular | Response only | REST JSON over HTTP | Backend serves data; frontend never writes to DB directly |
@@ -142,7 +148,7 @@ The system never writes back to the source CRM. The CrmImportService operates st
 
 ### 2. Non-Intrusive Deployment
 
-The entire system runs as a separate stack with no footprint on the CRM infrastructure. Docker Compose packages PostgreSQL, the .NET backend, and the Angular frontend into a self-contained unit. The only touchpoint with existing systems is a read-only database connection string or a file export.
+The entire system runs as a separate stack with no footprint on the CRM infrastructure. Docker Compose packages PostgreSQL, the .NET backend, and the Angular frontend into a self-contained unit. The only touchpoint with existing systems is the `crm-data/` folder, which is mounted read-only into the backend container.
 
 ### 3. Single-Laptop Deployable
 

@@ -1,8 +1,11 @@
-# Prompt 06 — Seed Data Generator
+# Prompt 06 — Seed Data Generator [SUPERSEDED]
+
+> **This prompt is superseded by `06-crm-csv-import.md`.**  
+> Real pseudonymised energy-sector CRM data is available in `crm-data/`. Use that instead of Bogus-generated data. The Bogus seeder is no longer needed.
 
 **Agent**: `general-purpose`  
 **Phase**: 2 — Risk Engine  
-**Status**: TODO  
+**Status**: CANCELLED — replaced by real CSV data  
 **Depends on**: Prompt 02 (backend scaffold)
 
 ---

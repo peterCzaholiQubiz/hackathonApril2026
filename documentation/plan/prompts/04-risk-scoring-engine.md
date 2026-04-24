@@ -2,7 +2,7 @@
 
 **Agent**: `ecc:tdd-guide`  
 **Phase**: 2 — Risk Engine  
-**Status**: TODO  
+**Status**: DONE  
 **Depends on**: Prompt 02 (backend scaffold)
 
 ---

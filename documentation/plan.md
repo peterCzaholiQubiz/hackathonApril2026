@@ -10,6 +10,74 @@ A read-only analytics layer that imports CRM data into a local PostgreSQL databa
 - **Frontend**: Angular (latest)
 - **AI**: Claude API — model `claude-sonnet-4-6`
 
+## CRM CSV Data Source
+
+The system consumes real pseudonymised energy-sector CRM data from the `crm-data/` folder at the repo root. All field values that could identify a person, organisation, or asset have been replaced with stable hash tokens — joins across files still work, but original values cannot be recovered.
+
+### Folder layout
+
+```
+crm-data/
+├── ArchievingSolution/
+│   ├── [Confidential] Look-up Customer Data_1.csv   # invoice archive index (part 1)
+│   ├── [Confidential] Look-up Customer Data_2.csv   # invoice archive index (part 2)
+│   └── Generic/
+│       ├── [Confidential] Contract Price.csv         # contract-specific tariff lines
+│       ├── [Confidential] Meter Read_1.csv           # meter reading history (1 of 8)
+│       │   … Meter Read_2 through Meter Read_8.csv
+│       ├── [Confidential] Price Proposition.csv      # catalogue/proposition tariffs
+│       ├── [Confidential] Timeslices - CaptarCode.csv
+│       ├── [Confidential] Timeslices - ConnectionType.csv
+│       ├── [Confidential] Timeslices - EnergyDeliveryStatus.csv
+│       ├── [Confidential] Timeslices - PhysicalStatus.csv
+│       ├── [Confidential] Timeslices - Profile.csv
+│       ├── [Confidential] Timeslices - ResidentialFunction.csv
+│       └── [Confidential] Timeslices - UsageType.csv
+└── ERPSQLServer/
+    ├── [Confidential] Organizations.csv              # master party table (customers, brokers, collectives)
+    ├── [Confidential] OrganizationTypes.csv          # lookup: 1=HeadOrg 2=Customer 5=Collective 6=Company 7=Broker
+    ├── [Confidential] Connections.csv                # energy connection points (EAN codes)
+    ├── [Confidential] ConnectionTypes.csv            # lookup: CHP, Biomass, WindTurbine, MainConnection …
+    ├── [Confidential] Contracts.csv                  # contract master (Customer + Period contracts)
+    ├── [Confidential] ProductTypes.csv               # lookup: 1=Electricity 2=Gas
+    ├── [Confidential] OrganizationContacts.csv       # org-level interaction/contact history
+    ├── [Confidential] ConnectionContacts.csv         # connection-level interaction history
+    ├── [Confidential] LastConnectionContacts.csv     # most-recent contact per connection
+    ├── [Confidential] Contract-Customer-Connection-BrokerDebtor.csv   # flattened reporting join
+    ├── [Confidential] ConnectionMeterReads.csv       # aggregated meter reads per connection
+    ├── [Confidential] [ValueAQuery] ASU001.csv       # annual standard usage (SJV) per EAN
+    ├── [Confidential] [ValueAQuery] CPY001.csv       # time-sliced connection properties
+    ├── [Confidential] [ValueAQuery] DQE - Captars.csv              # network tariff history per EAN
+    ├── [Confidential] [ValueAQuery] DQE - Prijzen v5 met Organization.csv   # price component history
+    └── [Confidential] [ValueAQuery] ERPMRE.csv       # detailed meter-read event fact table
+```
+
+All files: UTF-8 with BOM, comma-delimited. End-dates of `9999-12-31` or `99991231` mean open-ended.
+
+TypeScript interfaces for every file are in `frontend/src/app/core/models/crm-schema.model.ts`.
+
+### CSV → Domain model mapping
+
+| Domain entity | Primary CSV source | Key join columns |
+|---|---|---|
+| `customers` | `Organizations.csv` (OrganizationTypeId = 2) | `OrganizationId` → `crm_external_id` |
+| `contracts` | `Contracts.csv` | `ContractId` → `crm_external_id`; `CurrentAgreedAmount` → `monthly_value` |
+| `contract_prices` | `Contract Price.csv` + `Price Proposition.csv` | `ContractUniqueIdentifier` → contract FK |
+| `connections` | `Connections.csv` | `ConnectionId`, `EAN`, `ProductType` (Electricity/Gas) |
+| `meter_reads` | `ConnectionMeterReads.csv` + `Meter Read_1-8.csv` | `EAN` / `ConnectionId` |
+| `interactions` | `OrganizationContacts.csv`, `ConnectionContacts.csv` | `OrganizationId` / `ConnectionId`; `Subject` → channel |
+| `invoices` (archive) | `Look-up Customer Data_1.csv` + `_2.csv` | `Customer number`, `Debtor number`, `Invoice number` |
+
+### Risk scoring signals from real data
+
+| Risk dimension | CSV signals |
+|---|---|
+| **Churn** | `Contracts.csv` EndDate proximity; `OrganizationContacts.csv` contact frequency/subject="Cancellation"; `ConnectionContacts.csv` interaction count trend |
+| **Payment** | `Look-up Customer Data` invoice count; `ConnectionMeterReads` consumption vs billed amount gaps |
+| **Margin** | `Contract Price.csv` vs `Price Proposition.csv` deviation; `Contracts.csv` CurrentAgreedAmount trend across periods; `DQE - Captars.csv` tariff classification |
+
+---
+
 ## Requirements
 
 - Read-only against CRM source data; all writes go to a local PostgreSQL analytics database
@@ -412,11 +480,11 @@ hackathonApril2026/
 - Database schema (`database/init.sql`)
 - .NET solution scaffold with EF Core + initial migration
 - Domain models and enums
-- Seed data generator (Bogus, 50–100 customers)
+- **CRM CSV import** — `CrmImportService` reads `crm-data/` CSV files into PostgreSQL (replaces Bogus seed data)
 - Basic CRUD API endpoints (customers list + detail)
 - Angular scaffold with stub components
 
-**Deliverable**: Backend serves seeded data. Angular shows customer list.
+**Deliverable**: Backend imports real CRM CSV data. Angular shows customer list.
 
 ### Phase 2: Risk Engine + API (Days 3–4)
 - Deterministic risk scoring engine with all signals

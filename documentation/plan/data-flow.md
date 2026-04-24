@@ -6,29 +6,88 @@ This document describes the end-to-end data flow through the five stages of the 
 
 ## 1. CRM Import Flow
 
+### Source files
+
+The CRM source is the `crm-data/` folder — pseudonymised Dutch energy-sector data exported from an ERP/CRM system. All files are UTF-8 with BOM, comma-delimited. The folder ships with the repo; no external database connection is required.
+
 ```
-CRM Source (DB or CSV)
+crm-data/ERPSQLServer/
+  Organizations.csv               → customers (OrganizationTypeId=2)
+  Contracts.csv                   → contracts
+  Connections.csv                 → energy connection points
+  ConnectionMeterReads.csv        → meter read aggregates
+  OrganizationContacts.csv        → org-level interactions
+  ConnectionContacts.csv          → connection-level interactions
+  LastConnectionContacts.csv      → latest contact per connection
+  Contract-Customer-Connection-BrokerDebtor.csv  → reporting join
+  [ValueAQuery] DQE - Prijzen v5 met Organization.csv  → price history
+  [ValueAQuery] DQE - Captars.csv                      → network tariffs
+  [ValueAQuery] ASU001.csv                             → annual standard usage
+  ProductTypes.csv / OrganizationTypes.csv / ConnectionTypes.csv  → lookups
+
+crm-data/ArchievingSolution/
+  [Confidential] Look-up Customer Data_1.csv   → invoice archive index (part 1)
+  [Confidential] Look-up Customer Data_2.csv   → invoice archive index (part 2)
+  Generic/Contract Price.csv                   → contract tariff lines
+  Generic/Price Proposition.csv                → catalogue tariffs
+  Generic/Meter Read_1.csv … Meter Read_8.csv  → full EAN meter history
+  Generic/Timeslices - *.csv                   → EAN status/classification history
+```
+
+### Import sequence
+
+```
+crm-data/ CSV files (read from disk, UTF-8 BOM stripped)
         |
-        | READ-ONLY: SELECT or file read
+        | Step 1 — Lookup tables (no FK deps)
+        |   ProductTypes.csv → seed product_types
+        |   OrganizationTypes.csv → seed organization_types
+        |   ConnectionTypes.csv → seed connection_types
         v
 CrmImportService
         |
-        | For each entity type (customers, contracts, invoices,
-        | payments, complaints, interactions):
-        |   1. Read batch from CRM source
-        |   2. Map to domain models
-        |   3. Upsert into local PostgreSQL (match on crm_external_id)
-        |   4. Set imported_at timestamp
+        | Step 2 — Organizations (OrganizationTypeId=2 → customers)
+        |   Organizations.csv
+        |   crm_external_id = OrganizationId
+        |   Upsert → customers table
+        |
+        | Step 3 — Contracts
+        |   Contracts.csv (ContractId, StartDate, EndDate, CurrentAgreedAmount)
+        |   Contract Price.csv (price lines per ContractUniqueIdentifier)
+        |   Price Proposition.csv (catalogue tariffs)
+        |   Upsert → contracts table
+        |
+        | Step 4 — Connections (energy-specific)
+        |   Connections.csv (EAN, ProductType, DeliveryType)
+        |   Upsert → connections table
+        |
+        | Step 5 — Meter reads
+        |   ConnectionMeterReads.csv (aggregated, per connection)
+        |   Meter Read_1–8.csv (full history per EAN, scan all 8)
+        |   Upsert → meter_reads table
+        |
+        | Step 6 — Interactions / contacts
+        |   OrganizationContacts.csv  → interactions (org level)
+        |   ConnectionContacts.csv    → interactions (connection level)
+        |   Subject field maps: "Cancellation" → churn signal
+        |   Upsert → interactions table
+        |
+        | Step 7 — Invoice archive index
+        |   Look-up Customer Data_1.csv + _2.csv
+        |   (Customer number, Debtor number, Invoice number)
+        |   Upsert → invoices table
         v
 PostgreSQL (CRM mirror tables)
 ```
 
 ### Constraints
 
-- **Strictly read-only against CRM**: The service opens a read-only connection (or reads CSV files from disk). No INSERT, UPDATE, or DELETE is ever issued against the CRM source.
-- **Idempotent upserts**: Records are matched by `crm_external_id`. Re-importing the same data produces the same result. New records are inserted; existing records are updated.
-- **Ordering**: Customers must be imported before dependent entities (contracts, invoices, etc.) due to foreign key constraints.
-- **Transaction scope**: Each entity type is imported within a single transaction. If any entity type fails, that transaction rolls back without affecting previously imported types.
+- **Strictly read-only against CRM**: Files are read from disk. No write is ever issued against the source files.
+- **Strip UTF-8 BOM**: All files may begin with `\uFEFF`; strip before parsing.
+- **Open-ended dates**: `EndDate` values `9999-12-31` or `99991231` → store as `null` or `DateTime.MaxValue`.
+- **Idempotent upserts**: Records are matched by `crm_external_id`. Re-importing the same data produces the same result.
+- **Ordering**: Customers → Contracts → Connections → Meter reads → Interactions → Invoices (FK dependency order).
+- **Transaction scope**: Each step runs in its own transaction. Failure in one step rolls back only that step.
 
 ---
 
