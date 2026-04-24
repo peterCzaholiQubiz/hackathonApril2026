@@ -22,6 +22,7 @@ builder.Services.AddScoped<IRiskScoringEngine, RiskScoringEngine>();
 builder.Services.AddScoped<IClaudeExplanationService, AzureOpenAiExplanationService>();
 builder.Services.AddScoped<IPortfolioAggregationService, PortfolioAggregationService>();
 builder.Services.AddScoped<IMeterReadGenerationService, MeterReadGenerationService>();
+builder.Services.AddScoped<ITestDataGenerationService, TestDataGenerationService>();
 
 // ── Azure OpenAI ──────────────────────────────────────────────────────────────
 builder.Services.Configure<AzureOpenAiOptions>(
@@ -36,6 +37,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition =
             System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 builder.Services.AddEndpointsApiExplorer();

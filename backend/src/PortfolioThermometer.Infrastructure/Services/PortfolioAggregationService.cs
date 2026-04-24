@@ -8,8 +8,8 @@ using PortfolioThermometer.Infrastructure.Data;
 namespace PortfolioThermometer.Infrastructure.Services;
 
 /// <summary>
-/// Computes portfolio-level heat distributions and segment breakdowns,
-/// persisting the result as a PortfolioSnapshot.
+/// Computes portfolio-level heat distributions and segment breakdowns
+/// for an existing PortfolioSnapshot.
 /// </summary>
 public sealed class PortfolioAggregationService : IPortfolioAggregationService
 {
@@ -22,53 +22,49 @@ public sealed class PortfolioAggregationService : IPortfolioAggregationService
         _logger = logger;
     }
 
-    public async Task<PortfolioSnapshot> CreateSnapshotAsync(CancellationToken ct)
+    public async Task<PortfolioSnapshot> RefreshSnapshotAsync(Guid snapshotId, CancellationToken ct)
     {
-        // Fetch the most recent risk score per customer
-        var latestScores = await _db.RiskScores
+        var snapshot = await _db.PortfolioSnapshots
+            .FirstOrDefaultAsync(s => s.Id == snapshotId, ct)
+            ?? throw new InvalidOperationException($"Snapshot {snapshotId} was not found.");
+
+        var snapshotScores = await _db.RiskScores
             .Include(r => r.Customer)
-            .GroupBy(r => r.CustomerId)
-            .Select(g => g.OrderByDescending(r => r.ScoredAt).First())
+            .Where(r => r.SnapshotId == snapshotId)
             .ToListAsync(ct);
 
-        var total = latestScores.Count;
-        var greenCount = latestScores.Count(s => s.HeatLevel == "green");
-        var yellowCount = latestScores.Count(s => s.HeatLevel == "yellow");
-        var redCount = latestScores.Count(s => s.HeatLevel == "red");
+        var total = snapshotScores.Count;
+        var greenCount = snapshotScores.Count(s => s.HeatLevel == "green");
+        var yellowCount = snapshotScores.Count(s => s.HeatLevel == "yellow");
+        var redCount = snapshotScores.Count(s => s.HeatLevel == "red");
 
         decimal greenPct = total > 0 ? Math.Round((decimal)greenCount / total * 100, 2) : 0;
         decimal yellowPct = total > 0 ? Math.Round((decimal)yellowCount / total * 100, 2) : 0;
         decimal redPct = total > 0 ? Math.Round((decimal)redCount / total * 100, 2) : 0;
 
-        decimal avgChurn = total > 0 ? Math.Round((decimal)latestScores.Average(s => s.ChurnScore), 2) : 0;
-        decimal avgPayment = total > 0 ? Math.Round((decimal)latestScores.Average(s => s.PaymentScore), 2) : 0;
-        decimal avgMargin = total > 0 ? Math.Round((decimal)latestScores.Average(s => s.MarginScore), 2) : 0;
+        decimal avgChurn = total > 0 ? Math.Round((decimal)snapshotScores.Average(s => s.ChurnScore), 2) : 0;
+        decimal avgPayment = total > 0 ? Math.Round((decimal)snapshotScores.Average(s => s.PaymentScore), 2) : 0;
+        decimal avgMargin = total > 0 ? Math.Round((decimal)snapshotScores.Average(s => s.MarginScore), 2) : 0;
 
-        var segmentBreakdown = BuildSegmentBreakdown(latestScores);
+        var segmentBreakdown = BuildSegmentBreakdown(snapshotScores);
 
-        var snapshot = new PortfolioSnapshot
-        {
-            Id = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.UtcNow,
-            TotalCustomers = total,
-            GreenCount = greenCount,
-            YellowCount = yellowCount,
-            RedCount = redCount,
-            GreenPct = greenPct,
-            YellowPct = yellowPct,
-            RedPct = redPct,
-            AvgChurnScore = avgChurn,
-            AvgPaymentScore = avgPayment,
-            AvgMarginScore = avgMargin,
-            SegmentBreakdown = segmentBreakdown
-        };
+        snapshot.TotalCustomers = total;
+        snapshot.GreenCount = greenCount;
+        snapshot.YellowCount = yellowCount;
+        snapshot.RedCount = redCount;
+        snapshot.GreenPct = greenPct;
+        snapshot.YellowPct = yellowPct;
+        snapshot.RedPct = redPct;
+        snapshot.AvgChurnScore = avgChurn;
+        snapshot.AvgPaymentScore = avgPayment;
+        snapshot.AvgMarginScore = avgMargin;
+        snapshot.SegmentBreakdown = segmentBreakdown;
 
-        _db.PortfolioSnapshots.Add(snapshot);
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Portfolio snapshot created: {Total} customers, {Green} green / {Yellow} yellow / {Red} red",
-            total, greenCount, yellowCount, redCount);
+            "Portfolio snapshot refreshed: {SnapshotId}, {Total} customers, {Green} green / {Yellow} yellow / {Red} red",
+            snapshotId, total, greenCount, yellowCount, redCount);
 
         return snapshot;
     }

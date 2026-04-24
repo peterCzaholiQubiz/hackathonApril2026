@@ -1,24 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PortfolioThermometer.Api.Common;
-using PortfolioThermometer.Core.Models;
+using PortfolioThermometer.Api.ViewModels;
 using PortfolioThermometer.Infrastructure.Data;
 
 namespace PortfolioThermometer.Api.Controllers;
 
 [ApiController]
 [Route("api/customers")]
-public sealed class CustomersController : ControllerBase
+public sealed class CustomersController(AppDbContext db) : ControllerBase
 {
-    private readonly AppDbContext _db;
-
-    public CustomersController(AppDbContext db)
-    {
-        _db = db;
-    }
-
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<Customer>>>> GetCustomers(
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<CustomerSummaryVm>>>> GetCustomers(
         [FromQuery] string? segment,
         [FromQuery] string? heatLevel,
         [FromQuery] string? search,
@@ -32,7 +25,7 @@ public sealed class CustomersController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (page < 1) page = 1;
 
-        var query = _db.Customers
+        var query = db.Customers
             .Include(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Take(1))
             .Where(c => c.IsActive);
 
@@ -63,85 +56,131 @@ public sealed class CustomersController : ControllerBase
             .Take(pageSize)
             .ToListAsync(ct);
 
+        var vms = customers.Select(c =>
+        {
+            var latest = c.RiskScores.MaxBy(r => r.ScoredAt);
+            var risk = latest is null ? null : new RiskScoreSummaryVm(
+                latest.ChurnScore, latest.PaymentScore, latest.MarginScore,
+                latest.OverallScore, latest.HeatLevel, latest.ScoredAt);
+            return new CustomerSummaryVm(
+                c.Id, c.CrmExternalId, c.Name, c.CompanyName,
+                c.Email, c.Phone, c.Segment, c.AccountManager,
+                c.OnboardingDate, c.IsActive, risk);
+        }).ToList();
+
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
-        return Ok(ApiResponse<IReadOnlyList<Customer>>.Ok(customers, meta));
+        return Ok(ApiResponse<IReadOnlyList<CustomerSummaryVm>>.Ok(vms, meta));
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<Customer>>> GetCustomer(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<CustomerDetailVm>>> GetCustomer(Guid id, CancellationToken ct)
     {
-        var customer = await _db.Customers
+        var customer = await db.Customers
             .Include(c => c.Contracts)
             .Include(c => c.Invoices)
             .Include(c => c.Payments)
             .FirstOrDefaultAsync(c => c.Id == id, ct);
 
         if (customer is null)
-            return NotFound(ApiResponse<Customer>.Fail($"Customer {id} not found."));
+            return NotFound(ApiResponse<CustomerDetailVm>.Fail($"Customer {id} not found."));
 
-        return Ok(ApiResponse<Customer>.Ok(customer));
+        var vm = new CustomerDetailVm(
+            customer.Id, customer.CrmExternalId, customer.Name, customer.CompanyName,
+            customer.Email, customer.Phone, customer.Segment, customer.AccountManager,
+            customer.OnboardingDate, customer.IsActive,
+            customer.Contracts.Select(c => new ContractVm(
+                c.Id, c.CrmExternalId, c.ContractType, c.StartDate, c.EndDate,
+                c.MonthlyValue, c.Currency, c.Status, c.AutoRenew)).ToList(),
+            customer.Invoices.Select(i => new InvoiceVm(
+                i.Id, i.CrmExternalId, i.InvoiceNumber, i.IssuedDate, i.DueDate,
+                i.Amount, i.Currency, i.Status)).ToList(),
+            customer.Payments.Select(p => new PaymentVm(
+                p.Id, p.CrmExternalId, p.InvoiceId, p.PaymentDate,
+                p.Amount, p.DaysLate)).ToList());
+
+        return Ok(ApiResponse<CustomerDetailVm>.Ok(vm));
     }
 
     [HttpGet("{id:guid}/risk")]
-    public async Task<ActionResult<ApiResponse<object>>> GetCustomerRisk(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<RiskScoreVm?>>> GetCustomerRisk(Guid id, CancellationToken ct)
     {
-        var exists = await _db.Customers.AnyAsync(c => c.Id == id, ct);
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
         if (!exists)
-            return NotFound(ApiResponse<object>.Fail($"Customer {id} not found."));
+            return NotFound(ApiResponse<RiskScoreVm?>.Fail($"Customer {id} not found."));
 
-        var latestScore = await _db.RiskScores
+        var score = await db.RiskScores
             .Include(r => r.RiskExplanations)
             .Include(r => r.SuggestedActions)
             .Where(r => r.CustomerId == id)
             .OrderByDescending(r => r.ScoredAt)
             .FirstOrDefaultAsync(ct);
 
-        return Ok(ApiResponse<object?>.Ok(latestScore));
+        if (score is null)
+            return Ok(ApiResponse<RiskScoreVm?>.Ok(null));
+
+        var vm = new RiskScoreVm(
+            score.Id, score.CustomerId, score.SnapshotId,
+            score.ChurnScore, score.PaymentScore, score.MarginScore,
+            score.OverallScore, score.HeatLevel, score.ScoredAt,
+            score.RiskExplanations.Select(e => new RiskExplanationVm(
+                e.Id, e.RiskType, e.Explanation, e.Confidence,
+                e.GeneratedAt, e.ModelUsed)).ToList(),
+            score.SuggestedActions.Select(a => new SuggestedActionVm(
+                a.Id, a.ActionType, a.Priority, a.Title,
+                a.Description, a.GeneratedAt)).ToList());
+
+        return Ok(ApiResponse<RiskScoreVm?>.Ok(vm));
     }
 
     [HttpGet("{id:guid}/interactions")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<Interaction>>>> GetCustomerInteractions(
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<InteractionVm>>>> GetCustomerInteractions(
         Guid id,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var exists = await _db.Customers.AnyAsync(c => c.Id == id, ct);
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
         if (!exists)
-            return NotFound(ApiResponse<IReadOnlyList<Interaction>>.Fail($"Customer {id} not found."));
+            return NotFound(ApiResponse<IReadOnlyList<InteractionVm>>.Fail($"Customer {id} not found."));
 
-        var total = await _db.Interactions.CountAsync(i => i.CustomerId == id, ct);
-        var interactions = await _db.Interactions
+        var total = await db.Interactions.CountAsync(i => i.CustomerId == id, ct);
+        var interactions = await db.Interactions
             .Where(i => i.CustomerId == id)
             .OrderByDescending(i => i.InteractionDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(i => new InteractionVm(
+                i.Id, i.CrmExternalId, i.InteractionDate,
+                i.Channel, i.Direction, i.Summary, i.Sentiment))
             .ToListAsync(ct);
 
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
-        return Ok(ApiResponse<IReadOnlyList<Interaction>>.Ok(interactions, meta));
+        return Ok(ApiResponse<IReadOnlyList<InteractionVm>>.Ok(interactions, meta));
     }
 
     [HttpGet("{id:guid}/complaints")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<Complaint>>>> GetCustomerComplaints(
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<ComplaintVm>>>> GetCustomerComplaints(
         Guid id,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var exists = await _db.Customers.AnyAsync(c => c.Id == id, ct);
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
         if (!exists)
-            return NotFound(ApiResponse<IReadOnlyList<Complaint>>.Fail($"Customer {id} not found."));
+            return NotFound(ApiResponse<IReadOnlyList<ComplaintVm>>.Fail($"Customer {id} not found."));
 
-        var total = await _db.Complaints.CountAsync(c => c.CustomerId == id, ct);
-        var complaints = await _db.Complaints
+        var total = await db.Complaints.CountAsync(c => c.CustomerId == id, ct);
+        var complaints = await db.Complaints
             .Where(c => c.CustomerId == id)
             .OrderByDescending(c => c.CreatedDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(c => new ComplaintVm(
+                c.Id, c.CrmExternalId, c.CreatedDate, c.ResolvedDate,
+                c.Category, c.Severity, c.Description))
             .ToListAsync(ct);
 
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
-        return Ok(ApiResponse<IReadOnlyList<Complaint>>.Ok(complaints, meta));
+        return Ok(ApiResponse<IReadOnlyList<ComplaintVm>>.Ok(complaints, meta));
     }
 }

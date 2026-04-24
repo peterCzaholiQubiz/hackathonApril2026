@@ -13,6 +13,7 @@ public sealed class ImportController : ControllerBase
     private readonly ILogger<ImportController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
+    private static readonly object StatusLock = new();
 
     // Tracks the status of the last import run (in-memory for simplicity)
     private static ImportStatus _lastStatus = new(false, null, null, null);
@@ -30,9 +31,7 @@ public sealed class ImportController : ControllerBase
     }
 
     [HttpPost("trigger")]
-    public ActionResult<ApiResponse<object>> TriggerImport(
-        [FromBody] TriggerImportRequest request,
-        CancellationToken ct)
+    public ActionResult<ApiResponse<object>> TriggerImport([FromBody] TriggerImportRequest request)
     {
         var crmDataPath = CrmDataPathResolver.Resolve(
             request.CrmDataPath,
@@ -49,46 +48,44 @@ public sealed class ImportController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail("CRM data directory not found."));
         }
 
-        if (_lastStatus.IsRunning)
-            return Conflict(ApiResponse<object>.Fail("An import is already in progress."));
+        lock (StatusLock)
+        {
+            if (_lastStatus.IsRunning)
+                return Conflict(ApiResponse<object>.Fail("An import is already in progress."));
 
-        _lastStatus = new ImportStatus(true, DateTimeOffset.UtcNow, null, null);
+            _lastStatus = new ImportStatus(true, DateTimeOffset.UtcNow, null, null);
+        }
 
 
         _ = Task.Run(async () =>
         {
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var importService = scope.ServiceProvider.GetRequiredService<ICrmImportService>();
-            var aggregationService = scope.ServiceProvider.GetRequiredService<IPortfolioAggregationService>();
-            var scoringEngine = scope.ServiceProvider.GetRequiredService<IRiskScoringEngine>();
-            var explanationService = scope.ServiceProvider.GetRequiredService<IClaudeExplanationService>();
+            string? error = null;
 
             try
             {
-                _logger.LogInformation("Starting full import pipeline from {Path}", crmDataPath);
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var importService = scope.ServiceProvider.GetRequiredService<ICrmImportService>();
+
+                _logger.LogInformation("Starting CRM import from {Path}", crmDataPath);
 
                 var importResult = await importService.ImportAllAsync(crmDataPath, CancellationToken.None);
                 _logger.LogInformation("Import complete: {Customers} customers", importResult.CustomersImported);
-
-                var snapshot = await aggregationService.CreateSnapshotAsync(CancellationToken.None);
-                _logger.LogInformation("Snapshot created: {Id}", snapshot.Id);
-
-                var scores = await scoringEngine.ScoreAllCustomersAsync(snapshot.Id, CancellationToken.None);
-                _logger.LogInformation("Scored {Count} customers", scores.Count);
-
-                await explanationService.GenerateExplanationsAsync(scores, CancellationToken.None);
-                _logger.LogInformation("Explanations generated");
-
-                _lastStatus = new ImportStatus(false, _lastStatus.StartedAt, DateTimeOffset.UtcNow, null);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Import pipeline failed");
-                _lastStatus = new ImportStatus(false, _lastStatus.StartedAt, DateTimeOffset.UtcNow, ex.Message);
+                error = ex.Message;
+            }
+            finally
+            {
+                lock (StatusLock)
+                {
+                    _lastStatus = new ImportStatus(false, _lastStatus.StartedAt, DateTimeOffset.UtcNow, error);
+                }
             }
         }, CancellationToken.None);
 
-        return Accepted(ApiResponse<object>.Ok(new { message = "Import pipeline started." }));
+        return Accepted(ApiResponse<object>.Ok(new { message = "Import started. Risk scoring runs separately." }));
     }
 
     [HttpGet("status")]
