@@ -1,0 +1,8 @@
+Category,Consumption vs. Time (Day/Night),Volume,Fidelity (Switches),Payment Behavior,00:00 - 06:00 (Night),06:00 - 10:00 (Peak AM),10:00 - 17:00 (Midday),17:00 - 21:00 (Peak PM),21:00 - 00:00 (Evening)
+1. The Night Owl,High Night / Low Day,High,High (Loyal),Reliable,70% (EV Charge),5%,5%,5%,15%
+2. Predictable Heavy,Constant / Flat,Very High,High (Loyal),Reliable,20%,20%,20%,20%,20%
+3. The Loyal Inert,Traditional Peaks,Medium,Highest,Reliable,10%,30%,15%,35%,10%
+4. The Solar Prosumer,Negative (Day) / High (Night),Low (Net),Medium,Reliable,15%,10%,-50% (Export),20%,5%
+5. The Peak Spiker,Extreme Day Peaks,Medium,Medium,Reliable,5%,40%,5%,45%,5%
+6. The Serial Switcher,Varies,Varies,Lowest,Reliable,Random,High,Low,High,Low
+7. The Defaulter,Varies,Varies,Low,Unreliable,10%,25%,20%,30%,15%

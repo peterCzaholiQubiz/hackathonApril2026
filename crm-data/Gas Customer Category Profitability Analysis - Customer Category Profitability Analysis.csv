@@ -1,0 +1,7 @@
+Category,Consumption vs. Season/Time,Volume,Fidelity (Switches),Payment Behavior,00:00 - 06:00 (Night),06:00 - 09:00 (Warm up),09:00 - 17:00 (Day),17:00 - 22:00 (Peak),22:00 - 00:00 (Cool down)
+1. Inefficient Estate,Constant High (Winter),Highest,High (Loyal),Reliable,25% (Leaking),25%,20%,20%,10%
+2. The Hybrid User,Temperature Dependent,Medium,Medium,Reliable,0%,10%,5%,5%,0%
+3. Steady Cooker,Flat / Minimal,Lowest,High (Loyal),Reliable,0%,10%,10%,80% (Cooking),0%
+4. Dynamic Tracker,Volatile (Price Sensitive),Medium,Low,Reliable,0%,50% (Pre-heat),0%,40%,10%
+5. The Disconnector,Dropping to Zero,Zero,N/A,Reliable,0%,0%,0%,0%,0%
+6. The High-Risk,High (Winter),High,Low,Unreliable,15%,30%,15%,30%,10%
