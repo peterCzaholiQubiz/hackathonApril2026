@@ -204,11 +204,11 @@ export class CustomerListComponent implements OnInit {
   }
 
   latestHeat(c: Customer) {
-    return c.riskScores?.[0]?.heatLevel ?? 'green';
+    return c.latestRisk?.heatLevel ?? 'green';
   }
 
   latestScore(c: Customer, dim: 'churn' | 'payment' | 'margin' | 'overall'): number {
-    const s = c.riskScores?.[0];
+    const s = c.latestRisk;
     if (!s) return 0;
     const map = { churn: s.churnScore, payment: s.paymentScore, margin: s.marginScore, overall: s.overallScore };
     return map[dim];
@@ -233,3 +233,5 @@ export class CustomerListComponent implements OnInit {
       });
   }
 }
+
+

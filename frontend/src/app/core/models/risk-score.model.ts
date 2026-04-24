@@ -11,3 +11,12 @@ export interface RiskScore {
   heatLevel: HeatLevel;
   scoredAt: string;
 }
+
+export interface RiskScoreSummary {
+  churnScore: number;
+  paymentScore: number;
+  marginScore: number;
+  overallScore: number;
+  heatLevel: HeatLevel;
+  scoredAt: string;
+}

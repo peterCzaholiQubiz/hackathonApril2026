@@ -1,4 +1,4 @@
-import { RiskScore } from './risk-score.model';
+import { RiskScore, RiskScoreSummary } from './risk-score.model';
 
 export interface Customer {
   id: string;
@@ -13,6 +13,7 @@ export interface Customer {
   isActive: boolean;
   importedAt: string;
   updatedAt: string;
+  latestRisk?: RiskScoreSummary | null;
   riskScores?: RiskScore[];
 }
 
