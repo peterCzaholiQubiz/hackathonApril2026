@@ -1,3 +1,4 @@
+import { UpperCasePipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { SuggestedAction, ActionType, Priority } from '../../../core/models/suggested-action.model';
 
@@ -20,6 +21,7 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 @Component({
   selector: 'app-actions-panel',
   standalone: true,
+  imports: [UpperCasePipe],
   template: `
     <div class="actions">
       <h2 class="actions__title">Suggested Actions</h2>
