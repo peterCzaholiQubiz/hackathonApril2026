@@ -112,6 +112,25 @@ public sealed record SuggestedActionVm(
     string? Description,
     DateTimeOffset GeneratedAt);
 
+public sealed record CustomerConsumptionVm(
+    DateOnly From,
+    DateOnly To,
+    string? SelectedUnit,
+    IReadOnlyList<string> AvailableUnits,
+    IReadOnlyList<CustomerConsumptionPointVm> Points);
+
+public sealed record CustomerConsumptionPointVm(
+    string Month,
+    decimal Consumption,
+    string Unit,
+    string Quality,
+    IReadOnlyList<CustomerConsumptionQualityBreakdownVm> QualityBreakdown);
+
+public sealed record CustomerConsumptionQualityBreakdownVm(
+    string Quality,
+    int ReadCount,
+    decimal Consumption);
+
 public sealed record PortfolioSnapshotVm(
     Guid Id,
     DateTimeOffset CreatedAt,

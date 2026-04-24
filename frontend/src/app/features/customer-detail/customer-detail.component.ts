@@ -12,6 +12,7 @@ import { RiskBreakdownComponent } from './risk-breakdown/risk-breakdown.componen
 import { ExplanationPanelComponent } from './explanation-panel/explanation-panel.component';
 import { ActionsPanelComponent } from './actions-panel/actions-panel.component';
 import { CustomerTimelineComponent } from './customer-timeline/customer-timeline.component';
+import { CustomerConsumptionCardComponent } from './customer-consumption-card/customer-consumption-card.component';
 
 @Component({
   selector: 'app-customer-detail',
@@ -25,6 +26,7 @@ import { CustomerTimelineComponent } from './customer-timeline/customer-timeline
     ExplanationPanelComponent,
     ActionsPanelComponent,
     CustomerTimelineComponent,
+    CustomerConsumptionCardComponent,
   ],
   template: `
     <div class="detail-page">
@@ -36,7 +38,7 @@ import { CustomerTimelineComponent } from './customer-timeline/customer-timeline
         </div>
       } @else if (error) {
         <div class="error-msg">{{ error }}</div>
-      } @else if (customer && risk) {
+      } @else if (customer) {
         <header class="detail-page__header">
           <a class="back-link" routerLink="/customers">← Customers</a>
           <div class="detail-page__identity">
@@ -60,20 +62,38 @@ import { CustomerTimelineComponent } from './customer-timeline/customer-timeline
         </header>
 
         <div class="detail-page__body">
-          <section class="card">
-            <app-risk-breakdown [risk]="risk" />
-          </section>
+          @if (risk) {
+            <section class="card">
+              <app-risk-breakdown [risk]="risk" />
+            </section>
 
-          <section class="card">
-            <app-explanation-panel
-              [explanations]="risk.riskExplanations"
-              [overallScore]="risk.overallScore"
-            />
-          </section>
+            <section class="card">
+              <app-explanation-panel
+                [explanations]="risk.riskExplanations"
+                [overallScore]="risk.overallScore"
+              />
+            </section>
+          } @else {
+            <section class="card card--empty-state">
+              <h2 class="empty-state__title">Risk analysis not available</h2>
+              <p class="empty-state__text">
+                This customer has not been scored yet, so risk gauges, AI explanations, and suggested actions are not available.
+              </p>
+            </section>
+          }
+
+          <app-customer-consumption-card [customerId]="customer.id" />
 
           <div class="detail-page__bottom">
             <section class="card card--actions">
-              <app-actions-panel [actions]="risk.suggestedActions" />
+              @if (risk) {
+                <app-actions-panel [actions]="risk.suggestedActions" />
+              } @else {
+                <div class="empty-state empty-state--compact">
+                  <h2 class="empty-state__title">Suggested actions unavailable</h2>
+                  <p class="empty-state__text">Actions will appear here once a risk score is generated for this customer.</p>
+                </div>
+              }
             </section>
             <section class="card card--timeline">
               <app-customer-timeline
@@ -167,6 +187,31 @@ import { CustomerTimelineComponent } from './customer-timeline/customer-timeline
 
       &--actions { min-width: 0; }
       &--timeline { min-width: 0; }
+      &--empty-state { min-width: 0; }
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      &--compact {
+        min-height: 100%;
+        justify-content: center;
+      }
+
+      &__title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      &__text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--color-text-muted);
+      }
     }
 
     .skeleton-wrap {

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { ENVIRONMENT } from '../tokens/environment.token';
 import { ApiResponse } from '../models/api-response.model';
 import { Customer, CustomerDetail, Interaction, Complaint } from '../models/customer.model';
+import { CustomerConsumption, CustomerConsumptionQueryParams } from '../models/customer-consumption.model';
 import { CustomerRisk } from '../models/customer-risk.model';
 
 export interface CustomerListParams {
@@ -58,6 +59,18 @@ export class CustomerService {
   getComplaints(id: string): Observable<ApiResponse<Complaint[]>> {
     return this.http.get<ApiResponse<Complaint[]>>(
       `${this.env.apiUrl}/api/customers/${id}/complaints`
+    );
+  }
+
+  getConsumption(id: string, params: CustomerConsumptionQueryParams = {}): Observable<ApiResponse<CustomerConsumption>> {
+    let httpParams = new HttpParams();
+    if (params.from) httpParams = httpParams.set('from', params.from);
+    if (params.to) httpParams = httpParams.set('to', params.to);
+    if (params.unit) httpParams = httpParams.set('unit', params.unit);
+
+    return this.http.get<ApiResponse<CustomerConsumption>>(
+      `${this.env.apiUrl}/api/customers/${id}/consumption`,
+      { params: httpParams }
     );
   }
 }

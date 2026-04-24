@@ -101,6 +101,126 @@ public sealed class CustomersController(AppDbContext db) : ControllerBase
         return Ok(ApiResponse<CustomerDetailVm>.Ok(vm));
     }
 
+    [HttpGet("{id:guid}/consumption")]
+    public async Task<ActionResult<ApiResponse<CustomerConsumptionVm>>> GetCustomerConsumption(
+        Guid id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? unit,
+        CancellationToken ct = default)
+    {
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
+        if (!exists)
+            return NotFound(ApiResponse<CustomerConsumptionVm>.Fail($"Customer {id} not found."));
+
+        var range = ResolveConsumptionRange(from, to);
+        if (range is null)
+            return BadRequest(ApiResponse<CustomerConsumptionVm>.Fail("The from date must be on or before the to date."));
+
+        var (resolvedFrom, resolvedTo) = range.Value;
+        var fromUtc = new DateTimeOffset(resolvedFrom.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var toExclusiveUtc = new DateTimeOffset(resolvedTo.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+        var connectionIds = await db.Connections
+            .AsNoTracking()
+            .Where(c => c.CustomerId == id)
+            .Select(c => c.Id)
+            .ToListAsync(ct);
+
+        if (connectionIds.Count == 0)
+        {
+            return Ok(ApiResponse<CustomerConsumptionVm>.Ok(new CustomerConsumptionVm(
+                resolvedFrom,
+                resolvedTo,
+                null,
+                [],
+                [])));
+        }
+
+        var rows = await db.MeterReads
+            .AsNoTracking()
+            .Where(m =>
+                m.ConnectionId.HasValue &&
+                connectionIds.Contains(m.ConnectionId.Value) &&
+                m.Direction == "Consumption" &&
+                m.StartDate.HasValue &&
+                m.StartDate.Value >= fromUtc &&
+                m.StartDate.Value < toExclusiveUtc &&
+                m.Consumption.HasValue &&
+                !string.IsNullOrWhiteSpace(m.Unit))
+            .Select(m => new
+            {
+                StartDate = m.StartDate!.Value,
+                Consumption = m.Consumption!.Value,
+                Unit = m.Unit!,
+                Quality = string.IsNullOrWhiteSpace(m.Quality) ? "Unknown" : m.Quality!
+            })
+            .ToListAsync(ct);
+
+        var availableUnits = rows
+            .Select(r => r.Unit)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(u => u, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (availableUnits.Count == 0)
+        {
+            return Ok(ApiResponse<CustomerConsumptionVm>.Ok(new CustomerConsumptionVm(
+                resolvedFrom,
+                resolvedTo,
+                null,
+                [],
+                [])));
+        }
+
+        string? selectedUnit;
+        if (!string.IsNullOrWhiteSpace(unit))
+        {
+            selectedUnit = availableUnits.FirstOrDefault(u => string.Equals(u, unit, StringComparison.OrdinalIgnoreCase));
+            if (selectedUnit is null)
+                return BadRequest(ApiResponse<CustomerConsumptionVm>.Fail($"Unit '{unit}' is not available in the selected interval."));
+        }
+        else
+        {
+            selectedUnit = availableUnits[0];
+        }
+
+        var points = rows
+            .Where(r => string.Equals(r.Unit, selectedUnit, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(r => new DateOnly(r.StartDate.Year, r.StartDate.Month, 1))
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var qualityBreakdown = g
+                    .GroupBy(item => item.Quality, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => new CustomerConsumptionQualityBreakdownVm(
+                        group.Key,
+                        group.Count(),
+                        Math.Round(group.Sum(item => item.Consumption), 2)))
+                    .OrderBy(item => item.Quality, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var quality = qualityBreakdown.Count == 1
+                    ? qualityBreakdown[0].Quality
+                    : "Mixed";
+
+                return new CustomerConsumptionPointVm(
+                    g.Key.ToString("yyyy-MM-dd"),
+                    Math.Round(g.Sum(item => item.Consumption), 2),
+                    selectedUnit,
+                    quality,
+                    qualityBreakdown);
+            })
+            .ToList();
+
+        return Ok(ApiResponse<CustomerConsumptionVm>.Ok(new CustomerConsumptionVm(
+            resolvedFrom,
+            resolvedTo,
+            selectedUnit,
+            availableUnits,
+            points)));
+    }
+
     [HttpGet("{id:guid}/risk")]
     public async Task<ActionResult<ApiResponse<RiskScoreVm?>>> GetCustomerRisk(Guid id, CancellationToken ct)
     {
@@ -182,5 +302,14 @@ public sealed class CustomersController(AppDbContext db) : ControllerBase
 
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
         return Ok(ApiResponse<IReadOnlyList<ComplaintVm>>.Ok(complaints, meta));
+    }
+
+    private static (DateOnly From, DateOnly To)? ResolveConsumptionRange(DateOnly? from, DateOnly? to)
+    {
+        var resolvedTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var defaultFrom = new DateOnly(resolvedTo.Year, resolvedTo.Month, 1).AddMonths(-11);
+        var resolvedFrom = from ?? defaultFrom;
+
+        return resolvedFrom > resolvedTo ? null : (resolvedFrom, resolvedTo);
     }
 }
