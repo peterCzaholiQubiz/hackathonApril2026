@@ -1,9 +1,11 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using PortfolioThermometer.Api.Common;
 using PortfolioThermometer.Api.Controllers;
 using PortfolioThermometer.Api.ViewModels;
+using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
 using Xunit;
@@ -16,7 +18,7 @@ public sealed class CustomersControllerConsumptionTests
     public async Task GetCustomerConsumption_ReturnsNotFound_WhenCustomerDoesNotExist()
     {
         await using var db = CreateDbContext();
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerConsumption(Guid.NewGuid(), null, null, null, CancellationToken.None);
 
@@ -43,7 +45,7 @@ public sealed class CustomersControllerConsumptionTests
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
 
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerConsumption(
             customer.Id,
@@ -63,7 +65,7 @@ public sealed class CustomersControllerConsumptionTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithConsumptionAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerConsumption(
             customerId,
@@ -101,7 +103,7 @@ public sealed class CustomersControllerConsumptionTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithConsumptionAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerConsumption(
             customerId,

@@ -62,6 +62,13 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
             @if (customer.onboardingDate) {
               <span class="meta-chip meta-chip--muted">Since {{ customer.onboardingDate | slice:0:10 }}</span>
             }
+            <button
+              class="btn-calculate"
+              [disabled]="calculating"
+              (click)="calculateRisk()"
+            >
+              {{ calculating ? 'Calculating...' : 'Calculate Risk' }}
+            </button>
           </div>
         </header>
 
@@ -225,6 +232,21 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
       }
     }
 
+    .btn-calculate {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: background 150ms;
+
+      &:hover:not(:disabled) { background: var(--color-surface-3, #e5e7eb); }
+      &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+
     .skeleton-wrap {
       display: flex;
       flex-direction: column;
@@ -248,6 +270,7 @@ export class CustomerDetailComponent implements OnInit {
   interactions: Interaction[] = [];
   complaints: Complaint[] = [];
   loading = true;
+  calculating = false;
   error: string | null = null;
 
   get heatLevel() {
@@ -256,6 +279,22 @@ export class CustomerDetailComponent implements OnInit {
     if (s >= 70) return 'red' as const;
     if (s >= 40) return 'yellow' as const;
     return 'green' as const;
+  }
+
+  calculateRisk(): void {
+    if (!this.customer || this.calculating) return;
+    this.calculating = true;
+    this.customerSvc.calculateRisk(this.customer.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.risk = res.data ?? null;
+          this.calculating = false;
+        },
+        error: () => {
+          this.calculating = false;
+        },
+      });
   }
 
   ngOnInit(): void {

@@ -51,6 +51,13 @@ export class CustomerService {
     );
   }
 
+  calculateRisk(id: string): Observable<ApiResponse<CustomerRisk>> {
+    return this.http.post<ApiResponse<CustomerRisk>>(
+      `${this.env.apiUrl}/api/customers/${id}/risk/calculate`,
+      {}
+    );
+  }
+
   getInteractions(id: string): Observable<ApiResponse<Interaction[]>> {
     return this.http.get<ApiResponse<Interaction[]>>(
       `${this.env.apiUrl}/api/customers/${id}/interactions`

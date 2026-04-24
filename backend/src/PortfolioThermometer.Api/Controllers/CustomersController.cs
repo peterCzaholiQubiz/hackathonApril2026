@@ -2,13 +2,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PortfolioThermometer.Api.Common;
 using PortfolioThermometer.Api.ViewModels;
+using PortfolioThermometer.Core.Interfaces;
+using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
 
 namespace PortfolioThermometer.Api.Controllers;
 
 [ApiController]
 [Route("api/customers")]
-public sealed class CustomersController(AppDbContext db) : ControllerBase
+public sealed class CustomersController(
+    AppDbContext db,
+    IRiskScoringEngine riskScoringEngine,
+    IClaudeExplanationService explanationService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<CustomerSummaryVm>>>> GetCustomers(
@@ -312,6 +317,58 @@ public sealed class CustomersController(AppDbContext db) : ControllerBase
                 a.Description, a.GeneratedAt)).ToList());
 
         return Ok(ApiResponse<RiskScoreVm?>.Ok(vm));
+    }
+
+    [HttpPost("{id:guid}/risk/calculate")]
+    public async Task<ActionResult<ApiResponse<RiskScoreVm>>> CalculateCustomerRisk(Guid id, CancellationToken ct)
+    {
+        var customer = await db.Customers
+            .Include(c => c.Contracts)
+            .Include(c => c.Invoices)
+            .Include(c => c.Payments)
+            .Include(c => c.Complaints)
+            .Include(c => c.Interactions)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+        if (customer is null)
+            return NotFound(ApiResponse<RiskScoreVm>.Fail($"Customer {id} not found."));
+
+        // CreatedAt stays at MinValue so this snapshot is excluded from portfolio stats
+        var snapshot = new PortfolioSnapshot { Id = Guid.NewGuid(), CreatedAt = DateTimeOffset.MinValue };
+        db.PortfolioSnapshots.Add(snapshot);
+        await db.SaveChangesAsync(ct);
+
+        var score = riskScoringEngine.ScoreCustomer(
+            customer,
+            customer.Contracts.ToList(),
+            customer.Invoices.ToList(),
+            customer.Payments.ToList(),
+            customer.Complaints.ToList(),
+            customer.Interactions.ToList());
+
+        score.SnapshotId = snapshot.Id;
+        db.RiskScores.Add(score);
+        await db.SaveChangesAsync(ct);
+
+        await explanationService.GenerateExplanationsAsync([score], ct);
+
+        var saved = await db.RiskScores
+            .Include(r => r.RiskExplanations)
+            .Include(r => r.SuggestedActions)
+            .FirstAsync(r => r.Id == score.Id, ct);
+
+        var vm = new RiskScoreVm(
+            saved.Id, saved.CustomerId, saved.SnapshotId,
+            saved.ChurnScore, saved.PaymentScore, saved.MarginScore,
+            saved.OverallScore, saved.HeatLevel, saved.ScoredAt,
+            saved.RiskExplanations.Select(e => new RiskExplanationVm(
+                e.Id, e.RiskType, e.Explanation, e.Confidence,
+                e.GeneratedAt, e.ModelUsed)).ToList(),
+            saved.SuggestedActions.Select(a => new SuggestedActionVm(
+                a.Id, a.ActionType, a.Priority, a.Title,
+                a.Description, a.GeneratedAt)).ToList());
+
+        return Ok(ApiResponse<RiskScoreVm>.Ok(vm));
     }
 
     [HttpGet("{id:guid}/interactions")]

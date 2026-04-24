@@ -1,9 +1,11 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using PortfolioThermometer.Api.Common;
 using PortfolioThermometer.Api.Controllers;
 using PortfolioThermometer.Api.ViewModels;
+using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
 using Xunit;
@@ -16,7 +18,7 @@ public sealed class CustomersControllerPaymentsTests
     public async Task GetCustomerPayments_ReturnsNotFound_WhenCustomerDoesNotExist()
     {
         await using var db = CreateDbContext();
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerPayments(Guid.NewGuid(), null, 1, 12, CancellationToken.None);
 
@@ -31,7 +33,7 @@ public sealed class CustomersControllerPaymentsTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithPaymentsAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerPayments(customerId, null, 1, 12, CancellationToken.None);
 
@@ -61,7 +63,7 @@ public sealed class CustomersControllerPaymentsTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithPaymentsAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerPayments(customerId, "medium", 1, 12, CancellationToken.None);
 
@@ -87,7 +89,7 @@ public sealed class CustomersControllerPaymentsTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithPaymentsAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerPayments(customerId, "urgent", 1, 12, CancellationToken.None);
 
@@ -102,7 +104,7 @@ public sealed class CustomersControllerPaymentsTests
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithPaymentsAsync(db);
-        var controller = new CustomersController(db);
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
 
         var result = await controller.GetCustomerPayments(customerId, "medium", 99, 12, CancellationToken.None);
 
