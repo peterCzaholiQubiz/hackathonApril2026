@@ -1,4 +1,6 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PortfolioThermometer.Infrastructure.Data;
 
 namespace PortfolioThermometer.Api.Controllers;
@@ -8,10 +10,12 @@ namespace PortfolioThermometer.Api.Controllers;
 public sealed class StatusController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<StatusController> _logger;
 
-    public StatusController(AppDbContext db)
+    public StatusController(AppDbContext db, ILogger<StatusController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     [HttpGet("check")]
@@ -19,6 +23,13 @@ public sealed class StatusController : ControllerBase
     {
         try
         {
+            var connectionString = _db.Database.GetConnectionString()
+                ?? _db.Database.GetDbConnection().ConnectionString;
+
+            _logger.LogInformation(
+                "Status check DB connection string: {ConnectionString}",
+                RedactConnectionString(connectionString));
+
             var canConnect = await _db.Database.CanConnectAsync(ct);
 
             if (!canConnect)
@@ -43,6 +54,32 @@ public sealed class StatusController : ControllerBase
                 api = "ok",
                 database = "unavailable"
             });
+        }
+    }
+
+    private static string RedactConnectionString(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return "<empty>";
+
+        try
+        {
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = connectionString
+            };
+
+            foreach (var key in new[] { "Password", "Pwd" })
+            {
+                if (builder.ContainsKey(key))
+                    builder[key] = "***";
+            }
+
+            return builder.ConnectionString;
+        }
+        catch
+        {
+            return "<unparseable connection string>";
         }
     }
 }
