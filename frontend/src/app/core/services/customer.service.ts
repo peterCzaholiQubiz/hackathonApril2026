@@ -5,6 +5,7 @@ import { ENVIRONMENT } from '../tokens/environment.token';
 import { ApiResponse } from '../models/api-response.model';
 import { Customer, CustomerDetail, Interaction, Complaint } from '../models/customer.model';
 import { CustomerConsumption, CustomerConsumptionQueryParams } from '../models/customer-consumption.model';
+import { CustomerPayments, CustomerPaymentsParams } from '../models/customer-payment.model';
 import { CustomerRisk } from '../models/customer-risk.model';
 
 export interface CustomerListParams {
@@ -70,6 +71,18 @@ export class CustomerService {
 
     return this.http.get<ApiResponse<CustomerConsumption>>(
       `${this.env.apiUrl}/api/customers/${id}/consumption`,
+      { params: httpParams }
+    );
+  }
+
+  getPayments(id: string, params: CustomerPaymentsParams = {}): Observable<ApiResponse<CustomerPayments>> {
+    let httpParams = new HttpParams();
+    if (params.severity) httpParams = httpParams.set('severity', params.severity);
+    if (params.page != null) httpParams = httpParams.set('page', params.page.toString());
+    if (params.pageSize != null) httpParams = httpParams.set('pageSize', params.pageSize.toString());
+
+    return this.http.get<ApiResponse<CustomerPayments>>(
+      `${this.env.apiUrl}/api/customers/${id}/payments`,
       { params: httpParams }
     );
   }

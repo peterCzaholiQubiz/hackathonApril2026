@@ -96,9 +96,71 @@ public sealed class CustomersController(AppDbContext db) : ControllerBase
                 i.Amount, i.Currency, i.Status)).ToList(),
             customer.Payments.Select(p => new PaymentVm(
                 p.Id, p.CrmExternalId, p.InvoiceId, p.PaymentDate,
-                p.Amount, p.DaysLate)).ToList());
+                p.Amount, p.DaysLate, GetPaymentSeverity(p.DaysLate))).ToList());
 
         return Ok(ApiResponse<CustomerDetailVm>.Ok(vm));
+    }
+
+    [HttpGet("{id:guid}/payments")]
+    public async Task<ActionResult<ApiResponse<CustomerPaymentsVm>>> GetCustomerPayments(
+        Guid id,
+        [FromQuery] string? severity,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 12,
+        CancellationToken ct = default)
+    {
+        if (pageSize > 100) pageSize = 100;
+        if (pageSize < 1) pageSize = 12;
+        if (page < 1) page = 1;
+
+        var normalizedSeverity = NormalizePaymentSeverity(severity);
+        if (severity is not null && normalizedSeverity is null)
+            return BadRequest(ApiResponse<CustomerPaymentsVm>.Fail("Severity must be one of: low, medium, high."));
+
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
+        if (!exists)
+            return NotFound(ApiResponse<CustomerPaymentsVm>.Fail($"Customer {id} not found."));
+
+        var allPayments = db.Payments
+            .AsNoTracking()
+            .Where(p => p.CustomerId == id);
+
+        var summary = new PaymentSummaryVm(
+            await allPayments.CountAsync(p => p.DaysLate <= 15, ct),
+            await allPayments.CountAsync(p => p.DaysLate >= 16 && p.DaysLate <= 30, ct),
+            await allPayments.CountAsync(p => p.DaysLate > 30, ct));
+
+        var filteredPayments = normalizedSeverity switch
+        {
+            "low" => allPayments.Where(p => p.DaysLate <= 15),
+            "medium" => allPayments.Where(p => p.DaysLate >= 16 && p.DaysLate <= 30),
+            "high" => allPayments.Where(p => p.DaysLate > 30),
+            _ => allPayments,
+        };
+
+        var total = await filteredPayments.CountAsync(ct);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        if (page > totalPages) page = totalPages;
+
+        var payments = await filteredPayments
+            .OrderByDescending(p => p.PaymentDate)
+            .ThenByDescending(p => p.ImportedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new PaymentVm(
+                p.Id,
+                p.CrmExternalId,
+                p.InvoiceId,
+                p.PaymentDate,
+                p.Amount,
+                p.DaysLate,
+                GetPaymentSeverity(p.DaysLate)))
+            .ToListAsync(ct);
+
+        var vm = new CustomerPaymentsVm(normalizedSeverity, summary, payments);
+        var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
+
+        return Ok(ApiResponse<CustomerPaymentsVm>.Ok(vm, meta));
     }
 
     [HttpGet("{id:guid}/consumption")]
@@ -312,4 +374,20 @@ public sealed class CustomersController(AppDbContext db) : ControllerBase
 
         return resolvedFrom > resolvedTo ? null : (resolvedFrom, resolvedTo);
     }
+
+    private static string GetPaymentSeverity(int daysLate) => daysLate switch
+    {
+        <= 15 => "low",
+        <= 30 => "medium",
+        _ => "high",
+    };
+
+    private static string? NormalizePaymentSeverity(string? severity) => severity?.Trim().ToLowerInvariant() switch
+    {
+        null or "" => null,
+        "low" => "low",
+        "medium" => "medium",
+        "high" => "high",
+        _ => null,
+    };
 }

@@ -13,6 +13,7 @@ import { ExplanationPanelComponent } from './explanation-panel/explanation-panel
 import { ActionsPanelComponent } from './actions-panel/actions-panel.component';
 import { CustomerTimelineComponent } from './customer-timeline/customer-timeline.component';
 import { CustomerConsumptionCardComponent } from './customer-consumption-card/customer-consumption-card.component';
+import { CustomerPaymentsCardComponent } from './customer-payments-card/customer-payments-card.component';
 import { ComplaintsBoardComponent } from './complaints-board/complaints-board.component';
 
 @Component({
@@ -28,6 +29,7 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
     ActionsPanelComponent,
     CustomerTimelineComponent,
     CustomerConsumptionCardComponent,
+    CustomerPaymentsCardComponent,
     ComplaintsBoardComponent,
   ],
   template: `
@@ -85,6 +87,8 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
           }
 
           <app-customer-consumption-card [customerId]="customer.id" />
+
+          <app-customer-payments-card [customerId]="customer.id" />
 
           <section class="card card--complaints">
             <app-complaints-board [complaints]="complaints" />

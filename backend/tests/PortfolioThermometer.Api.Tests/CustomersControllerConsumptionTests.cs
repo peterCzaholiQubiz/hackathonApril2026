@@ -6,6 +6,7 @@ using PortfolioThermometer.Api.Controllers;
 using PortfolioThermometer.Api.ViewModels;
 using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
+using Xunit;
 
 namespace PortfolioThermometer.Api.Tests;
 
@@ -111,7 +112,8 @@ public sealed class CustomersControllerConsumptionTests
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var payload = ok.Value.Should().BeOfType<ApiResponse<CustomerConsumptionVm>>().Subject;
-        var data = payload.Data.Should().NotBeNull().Subject;
+        payload.Data.Should().NotBeNull();
+        var data = payload.Data!;
 
         data.SelectedUnit.Should().Be("m3");
         data.AvailableUnits.Should().BeEquivalentTo(["kWh", "m3"], options => options.WithStrictOrdering());

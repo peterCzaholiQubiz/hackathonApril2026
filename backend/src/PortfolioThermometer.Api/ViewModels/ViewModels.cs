@@ -63,7 +63,18 @@ public sealed record PaymentVm(
     Guid InvoiceId,
     DateOnly? PaymentDate,
     decimal? Amount,
-    int DaysLate);
+    int DaysLate,
+    string Severity);
+
+public sealed record CustomerPaymentsVm(
+    string? ActiveSeverity,
+    PaymentSummaryVm Summary,
+    IReadOnlyList<PaymentVm> Payments);
+
+public sealed record PaymentSummaryVm(
+    int Low,
+    int Medium,
+    int High);
 
 public sealed record InteractionVm(
     Guid Id,
