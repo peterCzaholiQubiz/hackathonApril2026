@@ -2,7 +2,7 @@
 
 **Agent**: `ecc:security-reviewer`  
 **Phase**: 4 — Polish  
-**Status**: TODO  
+**Status**: DONE  
 **Depends on**: All previous prompts complete
 
 ---

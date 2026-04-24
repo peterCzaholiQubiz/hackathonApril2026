@@ -2,7 +2,7 @@
 
 **Agent**: `general-purpose`  
 **Phase**: 3 — AI + Frontend  
-**Status**: TODO  
+**Status**: DONE  
 **Depends on**: Prompt 08 (dashboard + shared components)
 
 ---

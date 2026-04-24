@@ -4,5 +4,5 @@ namespace PortfolioThermometer.Core.Interfaces;
 
 public interface ICrmImportService
 {
-    Task<ImportResult> ImportAllAsync(CancellationToken ct);
+    Task<ImportResult> ImportAllAsync(string crmDataPath, CancellationToken ct);
 }

@@ -252,3 +252,105 @@ crm-data/ERPSQLServer/\[Confidential] OrganizationContacts.csv
 crm-data/ERPSQLServer/\[Confidential] Organizations.csv
 crm-data/ERPSQLServer/\[Confidential] OrganizationTypes.csv
 crm-data/ERPSQLServer/\[Confidential] ProductTypes.csv
+crm-data/All/\[Confidential] \[ValueAQuery] ASU001.csv
+crm-data/All/\[Confidential] \[ValueAQuery] CPY001.csv
+crm-data/All/\[Confidential] \[ValueAQuery] DQE - Captars.csv
+crm-data/All/\[Confidential] \[ValueAQuery] DQE - Prijzen v5 met Organization.csv
+crm-data/All/\[Confidential] \[ValueAQuery] ERPMRE.csv
+crm-data/All/\[Confidential] ConnectionContacts.csv
+crm-data/All/\[Confidential] ConnectionMeterReads.csv
+crm-data/All/\[Confidential] Connections.csv
+crm-data/All/\[Confidential] ConnectionTypes.csv
+crm-data/All/\[Confidential] Contract Price.csv
+crm-data/All/\[Confidential] Contract-Customer-Connection-BrokerDebtor.csv
+crm-data/All/\[Confidential] Contracts.csv
+crm-data/All/\[Confidential] LastConnectionContacts.csv
+crm-data/All/\[Confidential] Look-up Customer Data_1.csv
+crm-data/All/\[Confidential] Look-up Customer Data_2.csv
+crm-data/All/\[Confidential] Meter Read_1.csv
+crm-data/All/\[Confidential] Meter Read_2.csv
+crm-data/All/\[Confidential] Meter Read_3.csv
+crm-data/All/\[Confidential] Meter Read_4.csv
+crm-data/All/\[Confidential] Meter Read_5.csv
+crm-data/All/\[Confidential] Meter Read_6.csv
+crm-data/All/\[Confidential] Meter Read_7.csv
+crm-data/All/\[Confidential] Meter Read_8.csv
+crm-data/All/\[Confidential] OrganizationContacts.csv
+crm-data/All/\[Confidential] Organizations.csv
+crm-data/All/\[Confidential] OrganizationTypes.csv
+crm-data/All/\[Confidential] Price Proposition.csv
+crm-data/All/\[Confidential] ProductTypes.csv
+crm-data/All/\[Confidential] Timeslices - CaptarCode.csv
+crm-data/All/\[Confidential] Timeslices - ConnectionType.csv
+crm-data/All/\[Confidential] Timeslices - EnergyDeliveryStatus.csv
+crm-data/All/\[Confidential] Timeslices - PhysicalStatus.csv
+crm-data/All/\[Confidential] Timeslices - Profile.csv
+crm-data/All/\[Confidential] Timeslices - ResidentialFunction.csv
+crm-data/All/\[Confidential] Timeslices - UsageType.csv
+frontend/dist/portfolio-thermometer/prerendered-routes.json
+frontend/dist/portfolio-thermometer/browser/actions-panel.component.css.map
+frontend/dist/portfolio-thermometer/browser/app.component.css.map
+frontend/dist/portfolio-thermometer/browser/chunk-2ODLEHQL.js
+frontend/dist/portfolio-thermometer/browser/chunk-DRQJGPJU.js
+frontend/dist/portfolio-thermometer/browser/chunk-EPLILTB2.js
+frontend/dist/portfolio-thermometer/browser/chunk-F3AY4ZEQ.js
+frontend/dist/portfolio-thermometer/browser/chunk-LE2X3L3S.js
+frontend/dist/portfolio-thermometer/browser/chunk-PUFYKJ3E.js
+frontend/dist/portfolio-thermometer/browser/chunk-QFFAL5SW.js
+frontend/dist/portfolio-thermometer/browser/chunk-SUA22HLF.js
+frontend/dist/portfolio-thermometer/browser/chunk-V4CQSS3U.js
+frontend/dist/portfolio-thermometer/browser/chunk-WCSNUHI5.js
+frontend/dist/portfolio-thermometer/browser/customer-detail.component.css.map
+frontend/dist/portfolio-thermometer/browser/customer-filters.component.css.map
+frontend/dist/portfolio-thermometer/browser/customer-list.component.css.map
+frontend/dist/portfolio-thermometer/browser/customer-timeline.component.css.map
+frontend/dist/portfolio-thermometer/browser/dashboard.component.css.map
+frontend/dist/portfolio-thermometer/browser/explanation-panel.component.css.map
+frontend/dist/portfolio-thermometer/browser/heat-badge.component.css.map
+frontend/dist/portfolio-thermometer/browser/index.html
+frontend/dist/portfolio-thermometer/browser/loading-skeleton.component.css.map
+frontend/dist/portfolio-thermometer/browser/main.js
+frontend/dist/portfolio-thermometer/browser/polyfills.js
+frontend/dist/portfolio-thermometer/browser/portfolio-heatmap.component.css.map
+frontend/dist/portfolio-thermometer/browser/risk-breakdown.component.css.map
+frontend/dist/portfolio-thermometer/browser/risk-gauge.component.css.map
+frontend/dist/portfolio-thermometer/browser/risk-groups.component.css.map
+frontend/dist/portfolio-thermometer/browser/risk-trend.component.css.map
+frontend/dist/portfolio-thermometer/browser/score-bar.component.css.map
+frontend/dist/portfolio-thermometer/browser/segment-breakdown.component.css.map
+frontend/dist/portfolio-thermometer/browser/styles.css
+frontend/dist/portfolio-thermometer/browser/styles.css.map
+frontend/dist/portfolio-thermometer/browser/top-at-risk.component.css.map
+crm-data/Sample-100/\[Confidential] ConnectionContacts.csv
+crm-data/Sample-100/\[Confidential] ConnectionMeterReads.csv
+crm-data/Sample-100/\[Confidential] Connections.csv
+crm-data/Sample-100/\[Confidential] Contract-Customer-Connection-BrokerDebtor.csv
+crm-data/Sample-100/\[Confidential] Contracts.csv
+crm-data/Sample-100/\[Confidential] Look-up Customer Data_1.csv
+crm-data/Sample-100/\[Confidential] Look-up Customer Data_2.csv
+crm-data/Sample-100/\[Confidential] Meter Read_1.csv
+crm-data/Sample-100/\[Confidential] Meter Read_2.csv
+crm-data/Sample-100/\[Confidential] Meter Read_3.csv
+crm-data/Sample-100/\[Confidential] Meter Read_4.csv
+crm-data/Sample-100/\[Confidential] Meter Read_5.csv
+crm-data/Sample-100/\[Confidential] Meter Read_6.csv
+crm-data/Sample-100/\[Confidential] Meter Read_7.csv
+crm-data/Sample-100/\[Confidential] Meter Read_8.csv
+crm-data/Sample-100/\[Confidential] OrganizationContacts.csv
+crm-data/Sample-100/\[Confidential] Organizations.csv
+crm-data/Sample-100/sample-summary.json
+frontend/dist/portfolio-thermometer/browser/chunk-5TQOLJCF.js
+frontend/dist/portfolio-thermometer/browser/chunk-ARYU3EOQ.js
+frontend/dist/portfolio-thermometer/browser/chunk-AZPKQDAZ.js
+frontend/dist/portfolio-thermometer/browser/chunk-E54WNDTE.js
+frontend/dist/portfolio-thermometer/browser/chunk-ESC24QZP.js
+frontend/dist/portfolio-thermometer/browser/chunk-GPK2FZAR.js
+frontend/dist/portfolio-thermometer/browser/chunk-H3QFG5N3.js
+frontend/dist/portfolio-thermometer/browser/chunk-IU7VIO44.js
+frontend/dist/portfolio-thermometer/browser/chunk-P5G7QMI4.js
+frontend/dist/portfolio-thermometer/browser/chunk-QQTAGAQQ.js
+frontend/dist/portfolio-thermometer/browser/chunk-R7FR44U5.js
+frontend/dist/portfolio-thermometer/browser/chunk-SIVCYGJJ.js
+frontend/dist/portfolio-thermometer/browser/chunk-VQIHJJTN.js
+frontend/dist/portfolio-thermometer/browser/chunk-W2HVUASO.js
+frontend/dist/portfolio-thermometer/browser/meter-reads.component.css.map

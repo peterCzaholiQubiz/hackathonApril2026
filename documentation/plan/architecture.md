@@ -28,8 +28,8 @@
 |                                     |                |
 |                                     v                |
 |  +------------------------------+  +--------------+  |
-|  | ClaudeExplanationService     |  | Portfolio    |  |
-|  | (calls Claude claude-sonnet-4-6  |  | Aggregation  |  |
+|  | AzureOpenAiExplanationService|  | Portfolio    |  |
+|  | (calls Azure OpenAI gpt-4o   |  | Aggregation  |  |
 |  |  for NL explanations+actions)|  | Service      |  |
 |  +------------------------------+  +--------------+  |
 |                                                      |
@@ -76,11 +76,11 @@
 
 External Service:
 +------------------------------------------------------+
-|              Claude API (Anthropic)                   |
-|  Model: claude-sonnet-4-6                             |
+|              Azure OpenAI                             |
+|  Deployment: gpt-4o                                  |
 |  - Explanation generation                            |
 |  - Suggested action generation                       |
-|  - Called from ClaudeExplanationService               |
+|  - Called from AzureOpenAiExplanationService         |
 |  - Batched (10/batch), throttled (5 concurrent)      |
 +------------------------------------------------------+
 ```
@@ -103,7 +103,7 @@ The domain layer with zero external dependencies. Contains:
 
 - **Domain models**: Customer, Contract, Invoice, Payment, Complaint, Interaction, RiskScore, RiskExplanation, SuggestedAction, PortfolioSnapshot
 - **Enums**: HeatLevel (Green/Yellow/Red), RiskType (Churn/Payment/Margin/Overall), ActionType
-- **Interfaces**: ICrmImportService, IRiskScoringEngine, IClaudeExplanationService, IPortfolioAggregationService, ICustomerRepository
+- **Interfaces**: ICrmImportService, IRiskScoringEngine, IAiExplanationService, IPortfolioAggregationService, ICustomerRepository
 - **Scoring constants**: signal weights, heat level thresholds, composite weights
 
 This layer defines what the system does. It has no knowledge of databases, HTTP, or external APIs.
@@ -117,9 +117,9 @@ Implements all Core interfaces with concrete technology:
 - **Services**:
   - `CrmImportService` — reads from CRM source (connection string or CSV), upserts to local PG
   - `RiskScoringEngine` — deterministic rule evaluation, writes risk_scores
-  - `ClaudeExplanationService` — HTTP client to Claude API, prompt construction, response parsing
+  - `AzureOpenAiExplanationService` — HTTP client to Azure OpenAI, prompt construction, response parsing
   - `PortfolioAggregationService` — computes snapshot statistics from risk_scores
-- **Claude**: API client wrapper, prompt templates, retry/fallback logic
+- **AzureOpenAi**: API client wrapper, prompt templates, retry/fallback logic
 
 ### Frontend Layer (Angular SPA)
 
@@ -136,7 +136,7 @@ Standalone single-page application served statically. Communicates exclusively t
 |-------------|-----------|----------|-------------|
 | CRM Source -> Backend | One-way read | File system — `crm-data/` CSV files (UTF-8 BOM, comma-delimited) | Read-only; never mutates source files |
 | Backend -> PostgreSQL | Read/write | EF Core via Npgsql | Local analytics DB; all writes happen here |
-| Backend -> Claude API | Request/response | HTTPS REST | Batched (10/batch), throttled (5 concurrent), cached results |
+| Backend -> Azure OpenAI | Request/response | HTTPS REST | Batched (10/batch), throttled (5 concurrent), cached results |
 | Backend -> Angular | Response only | REST JSON over HTTP | Backend serves data; frontend never writes to DB directly |
 | Angular -> Backend | Request | REST JSON over HTTP | Import trigger is the only state-changing user action |
 
@@ -152,11 +152,11 @@ The entire system runs as a separate stack with no footprint on the CRM infrastr
 
 ### 3. Single-Laptop Deployable
 
-All components run in Docker containers orchestrated by a single `docker-compose.yml`. No cloud services are required at runtime except the Claude API (which requires internet access). The system is designed to start with `docker-compose up` and be demonstrable within minutes.
+All components run in Docker containers orchestrated by a single `docker-compose.yml`. No cloud services are required at runtime except Azure OpenAI (which requires internet access and a valid Azure deployment). The system is designed to start with `docker-compose up` and be demonstrable within minutes.
 
 ### 4. Deterministic Scoring, AI-Generated Explanations
 
-Risk scores are computed by transparent, rule-based logic with documented signal weights. AI (Claude) is used only for natural language explanation and action suggestion generation. This separation ensures that scoring is reproducible and auditable, while explanations are human-readable and contextual. If the Claude API is unavailable, the system degrades gracefully with placeholder explanations.
+Risk scores are computed by transparent, rule-based logic with documented signal weights. AI (Azure OpenAI) is used only for natural language explanation and action suggestion generation. This separation ensures that scoring is reproducible and auditable, while explanations are human-readable and contextual. If Azure OpenAI is unavailable, the system degrades gracefully with placeholder explanations.
 
 ### 5. Advisory, Not Prescriptive
 

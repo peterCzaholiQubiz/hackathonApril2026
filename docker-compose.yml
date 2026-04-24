@@ -29,7 +29,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-portfolio_thermometer};Username=postgres;Password=${POSTGRES_PASSWORD}
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY}
-      CrmDataPath: /data/crm-data
+      CrmDataRoot: /data/crm-data
+      CrmDataPath: Sample-100
     volumes:
       - ./crm-data:/data/crm-data:ro
     depends_on:

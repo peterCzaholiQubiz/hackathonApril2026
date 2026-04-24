@@ -203,3 +203,41 @@ CREATE TABLE IF NOT EXISTS suggested_actions (
 CREATE INDEX IF NOT EXISTS idx_suggested_actions_risk_score_id ON suggested_actions (risk_score_id);
 CREATE INDEX IF NOT EXISTS idx_suggested_actions_customer_id   ON suggested_actions (customer_id);
 CREATE INDEX IF NOT EXISTS idx_suggested_actions_priority      ON suggested_actions (priority);
+
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS connections (
+    id                UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    crm_external_id   VARCHAR(100) NOT NULL,
+    customer_id       UUID         REFERENCES customers (id) ON DELETE SET NULL,
+    ean               VARCHAR(50)  NOT NULL,
+    product_type      VARCHAR(20),   -- 'Electricity' | 'Gas'
+    delivery_type     VARCHAR(10),   -- 'LDN' | 'ODN' | 'NA'
+    connection_type_id INTEGER,
+    imported_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_connections_crm_id UNIQUE (crm_external_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_connections_customer_id ON connections (customer_id);
+CREATE INDEX IF NOT EXISTS idx_connections_ean         ON connections (ean);
+
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS meter_reads (
+    id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    crm_external_id  VARCHAR(200)  NOT NULL,
+    connection_id    UUID          REFERENCES connections (id) ON DELETE SET NULL,
+    start_date       TIMESTAMPTZ,
+    end_date         TIMESTAMPTZ,
+    consumption      DECIMAL(15,4),
+    unit             VARCHAR(10),   -- 'kWh' | 'm3'
+    usage_type       VARCHAR(20),   -- 'UsageHigh' | 'UsageLow'
+    direction        VARCHAR(20),   -- 'Consumption' | 'Production'
+    quality          VARCHAR(20),   -- 'Estimated' | 'Measured' | 'Customer' | 'Actual'
+    source           VARCHAR(30),   -- 'ConnectionMeterReads' | 'MeterRead_1-8' | 'Generated'
+    imported_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_meter_reads_crm_id UNIQUE (crm_external_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meter_reads_connection_id ON meter_reads (connection_id);
+CREATE INDEX IF NOT EXISTS idx_meter_reads_start_date    ON meter_reads (start_date);

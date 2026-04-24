@@ -30,6 +30,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'meter-reads',
+    loadComponent: () =>
+      import('./features/meter-reads/meter-reads.component').then(
+        (m) => m.MeterReadsComponent
+      ),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

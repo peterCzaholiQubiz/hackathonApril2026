@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using PortfolioThermometer.Api.Middleware;
 using PortfolioThermometer.Core.Interfaces;
+using PortfolioThermometer.Infrastructure.AzureOpenAi;
 using PortfolioThermometer.Infrastructure.Data;
 using PortfolioThermometer.Infrastructure.Repositories;
 using PortfolioThermometer.Infrastructure.Services;
@@ -18,18 +19,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<ICrmImportService, CrmImportService>();
 builder.Services.AddScoped<IRiskScoringEngine, RiskScoringEngine>();
-builder.Services.AddScoped<IClaudeExplanationService, ClaudeExplanationService>();
+builder.Services.AddScoped<IClaudeExplanationService, AzureOpenAiExplanationService>();
 builder.Services.AddScoped<IPortfolioAggregationService, PortfolioAggregationService>();
+builder.Services.AddScoped<IMeterReadGenerationService, MeterReadGenerationService>();
 
-// ── HTTP client for Claude API ────────────────────────────────────────────────
-builder.Services.AddHttpClient("ClaudeApi", client =>
-{
-    client.BaseAddress = new Uri("https://api.anthropic.com/");
-    client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
-    var apiKey = builder.Configuration["Anthropic:ApiKey"] ?? string.Empty;
-    if (!string.IsNullOrWhiteSpace(apiKey))
-        client.DefaultRequestHeaders.Add("x-api-key", apiKey);
-});
+// ── Azure OpenAI ──────────────────────────────────────────────────────────────
+builder.Services.Configure<AzureOpenAiOptions>(
+    builder.Configuration.GetSection(AzureOpenAiOptions.SectionName));
+builder.Services.AddHttpClient("azureopenai");
+builder.Services.AddSingleton<IAzureOpenAiClient, AzureOpenAiClient>();
 
 // ── Controllers & API ─────────────────────────────────────────────────────────
 builder.Services.AddControllers()

@@ -89,6 +89,62 @@ namespace PortfolioThermometer.Infrastructure.Data.Migrations
                     b.ToTable("complaints", (string)null);
                 });
 
+            modelBuilder.Entity("PortfolioThermometer.Core.Models.Connection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("ConnectionTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("connection_type_id");
+
+                    b.Property<string>("CrmExternalId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("crm_external_id");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("DeliveryType")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("delivery_type");
+
+                    b.Property<string>("Ean")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ean");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("ProductType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("product_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CrmExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_connections_crm_id");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("idx_connections_customer_id");
+
+                    b.HasIndex("Ean")
+                        .HasDatabaseName("idx_connections_ean");
+
+                    b.ToTable("connections", (string)null);
+                });
+
             modelBuilder.Entity("PortfolioThermometer.Core.Models.Contract", b =>
                 {
                     b.Property<Guid>("Id")
@@ -387,6 +443,80 @@ namespace PortfolioThermometer.Infrastructure.Data.Migrations
                         .HasDatabaseName("idx_invoices_status");
 
                     b.ToTable("invoices", (string)null);
+                });
+
+            modelBuilder.Entity("PortfolioThermometer.Core.Models.MeterRead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<decimal?>("Consumption")
+                        .HasPrecision(15, 4)
+                        .HasColumnType("numeric(15,4)")
+                        .HasColumnName("consumption");
+
+                    b.Property<string>("CrmExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("crm_external_id");
+
+                    b.Property<string>("Direction")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("direction");
+
+                    b.Property<DateTimeOffset?>("EndDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("end_date");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("Quality")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("quality");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset?>("StartDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("unit");
+
+                    b.Property<string>("UsageType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("usage_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId")
+                        .HasDatabaseName("idx_meter_reads_connection_id");
+
+                    b.HasIndex("CrmExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_meter_reads_crm_id");
+
+                    b.HasIndex("StartDate")
+                        .HasDatabaseName("idx_meter_reads_start_date");
+
+                    b.ToTable("meter_reads", (string)null);
                 });
 
             modelBuilder.Entity("PortfolioThermometer.Core.Models.Payment", b =>
@@ -749,6 +879,16 @@ namespace PortfolioThermometer.Infrastructure.Data.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("PortfolioThermometer.Core.Models.Connection", b =>
+                {
+                    b.HasOne("PortfolioThermometer.Core.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("PortfolioThermometer.Core.Models.Contract", b =>
                 {
                     b.HasOne("PortfolioThermometer.Core.Models.Customer", "Customer")
@@ -780,6 +920,16 @@ namespace PortfolioThermometer.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("PortfolioThermometer.Core.Models.MeterRead", b =>
+                {
+                    b.HasOne("PortfolioThermometer.Core.Models.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Connection");
                 });
 
             modelBuilder.Entity("PortfolioThermometer.Core.Models.Payment", b =>

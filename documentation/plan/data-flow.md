@@ -128,7 +128,7 @@ PostgreSQL (risk_scores + CRM mirror tables)
         |
         | Read: risk_scores + contributing signal data per customer
         v
-ClaudeExplanationService
+AzureOpenAiExplanationService
         |
         | 1. Identify customers needing (re)generation:
         |    - New risk scores without explanations
@@ -142,7 +142,7 @@ ClaudeExplanationService
         |       - Risk scores per dimension
         |       - Contributing signals with values
         |       - Instruction: produce JSON with explanation + confidence
-        |    b. Call Claude API (claude-sonnet-4-6)
+        |    b. Call Azure OpenAI Chat Completions API (gpt-4o deployment)
         |    c. Parse JSON response
         |    d. Write risk_explanations rows
         |
@@ -151,7 +151,7 @@ ClaudeExplanationService
         |       - All three risk explanations + scores
         |       - Customer context
         |       - Instruction: produce JSON array of actions
-        |    b. Call Claude API (claude-sonnet-4-6)
+        |    b. Call Azure OpenAI Chat Completions API (gpt-4o deployment)
         |    c. Parse JSON response
         |    d. Write suggested_actions rows
         |
@@ -168,7 +168,7 @@ PostgreSQL (risk_explanations + suggested_actions)
 - **Throttling**: Maximum 5 concurrent API calls via SemaphoreSlim to respect rate limits.
 - **Retry**: Exponential backoff on transient failures (429, 500, 503). Maximum 3 retries per batch.
 - **Fallback**: If all retries fail, a placeholder explanation is stored: `"Explanation temporarily unavailable. Risk score is based on: [signal list]."` with confidence `"low"`.
-- **Model tracking**: Every explanation row records `model_used = "claude-sonnet-4-6"` for auditability.
+- **Model tracking**: Every explanation row records `model_used` (Azure OpenAI deployment name, e.g. `"gpt-4o"`) for auditability.
 
 ---
 
@@ -266,7 +266,7 @@ Angular SPA loads (static assets from container or dev server)
 |                                                                  |
 |   Renders:                                                       |
 |   - Three risk gauges (churn, payment, margin)                   |
-|   - AI-generated explanation panel (labeled "AI Advisory")       |
+|   - AI-generated explanation panel (labeled "AI Advisory")        |
 |   - Suggested actions with priority badges                       |
 |   - Interaction + complaint timeline                             |
 |   - Contract and invoice summary                                 |
@@ -304,10 +304,10 @@ The full pipeline executes when a user triggers an import:
 4.  CrmImportService reads CRM source, upserts to PostgreSQL        [~5-10s]
 5.  RiskScoringEngine scores all active customers                    [~1-2s]
 6.  PortfolioAggregationService computes snapshot                    [~1s]
-7.  ClaudeExplanationService generates explanations + actions        [~60-120s for 100 customers]
+7.  AzureOpenAiExplanationService generates explanations + actions   [~60-120s for 100 customers]
 8.  Import status updated to "complete"
 9.  Angular polls GET /api/import/status until complete
 10. Angular refreshes dashboard data
 ```
 
-Total pipeline time for 100 customers: approximately 1-2 minutes, dominated by Claude API calls in step 7. The UI remains responsive throughout, showing progress via the import status endpoint.
+Total pipeline time for 100 customers: approximately 1-2 minutes, dominated by Azure OpenAI API calls in step 7. The UI remains responsive throughout, showing progress via the import status endpoint.

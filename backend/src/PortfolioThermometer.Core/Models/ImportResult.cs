@@ -7,5 +7,6 @@ public record ImportResult(
     int PaymentsImported,
     int ComplaintsImported,
     int InteractionsImported,
+    int ConnectionsImported,
     DateTimeOffset ImportedAt
 );

@@ -1,4 +1,4 @@
-# ADR-003: Claude API (claude-sonnet-4-6) for Risk Explanations and Suggested Actions
+# ADR-003: Azure OpenAI (gpt-4o) for Risk Explanations and Suggested Actions
 
 ## Status
 
@@ -6,7 +6,7 @@ Accepted
 
 ## Date
 
-2026-04-10
+2026-04-24
 
 ## Context
 
@@ -35,40 +35,55 @@ To address the Q&A concern directly:
 
 - Risk scores are computed by deterministic rules, not by the AI. The AI never decides the score.
 - The AI receives the score and the contributing signals as structured input. It explains what the rules already computed.
-- Every explanation is stored with the model identifier (`claude-sonnet-4-6`) and a confidence level.
+- Every explanation is stored with the model identifier (Azure OpenAI deployment name) and a confidence level.
 - The UI displays both the numeric score with contributing signals AND the AI-generated explanation, so users can verify the reasoning.
 - The system advises ("consider," "may benefit from") rather than prescribes ("must," "should immediately").
 
 ## Decision
 
-Use the Claude API with model `claude-sonnet-4-6` to generate natural language risk explanations and suggested actions. The AI layer is strictly post-scoring: it explains and advises on scores that were already computed by deterministic rules.
+Use Azure OpenAI with deployment `gpt-4o` to generate natural language risk explanations and suggested actions. The AI layer is strictly post-scoring: it explains and advises on scores that were already computed by deterministic rules.
+
+### Configuration
+
+| Setting | Environment variable | Example |
+|---------|---------------------|---------|
+| Azure OpenAI endpoint | `AzureOpenAI:Endpoint` | `https://hackathoncodemonkeyopenai.openai.azure.com/` |
+| API key | `AzureOpenAI:ApiKey` | (see appsettings.json) |
+| Deployment name | `AzureOpenAI:Deployment` | `gpt-4o` |
+| API version | `AzureOpenAI:ApiVersion` | `2024-02-01` |
+
+The API call uses the Azure OpenAI Chat Completions endpoint:
+`POST https://hackathoncodemonkeyopenai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-01`
+
+Auth header: `api-key: {AZURE_OPENAI_API_KEY}`
 
 ## Consequences
 
 ### Positive
 
-- **High-quality natural language**: Claude produces fluent, contextual explanations that read as professional advisory notes rather than templated output
+- **High-quality natural language**: GPT-4o produces fluent, contextual explanations that read as professional advisory notes rather than templated output
 - **Scalable to new signals**: Adding a new risk signal to the scoring engine does not require authoring new templates; the prompt automatically incorporates it
-- **Advisory tone**: Claude naturally produces the hedged, contextual language the challenge owner requested
+- **Advisory tone**: The model naturally produces the hedged, contextual language the challenge owner requested
 - **Confidence signaling**: The model can express confidence levels based on signal strength and consistency
-- **Structured output**: Claude supports JSON mode, enabling reliable parsing of explanations and action arrays
+- **Structured output**: Azure OpenAI supports JSON mode (`response_format: { type: "json_object" }`), enabling reliable parsing of explanations and action arrays
 - **Graceful degradation**: If the API is unavailable, the system falls back to a placeholder explanation with confidence "low"; scores remain fully functional
+- **Enterprise-grade reliability**: Azure OpenAI provides SLA-backed availability and data residency guarantees
 
 ### Negative
 
-- **External dependency**: Requires internet access and a valid API key at explanation-generation time. The system cannot generate new explanations fully offline.
+- **External dependency**: Requires internet access and valid Azure credentials at explanation-generation time. The system cannot generate new explanations fully offline.
 - **Latency**: Each batch of 10 customers takes 2-5 seconds for explanation generation. For 100 customers, the full pipeline takes approximately 1-2 minutes with 5 concurrent batches.
-- **Cost**: API usage incurs per-token costs. For hackathon scale (100 customers, occasional re-runs), cost is negligible. At production scale, caching and selective regeneration become important.
-- **Non-determinism**: The same inputs may produce slightly different explanations across runs. This is acceptable for advisory text but means explanations are not byte-for-byte reproducible.
+- **Cost**: API usage incurs per-token costs. For hackathon scale (100 customers, occasional re-runs), cost is negligible.
+- **Non-determinism**: The same inputs may produce slightly different explanations across runs. This is acceptable for advisory text.
 - **Trust boundary**: Users must understand that explanations are AI-generated. The UI must label them clearly and present the deterministic score alongside.
 
 ### Alternatives Considered
 
 | Alternative | Why Not Chosen |
 |-------------|----------------|
+| **Anthropic Claude API** | Team has Azure OpenAI access available; Azure provides enterprise SLA and data residency. No meaningful quality difference for this use case. |
 | **Templated strings** | Combinatorial explosion for multi-signal explanations. Cannot reason across dimensions. Produces mechanical output. Does not scale to new signals without manual authoring. |
-| **Local LLM (Ollama/llama.cpp)** | Avoids API dependency, but requires significant GPU/CPU resources on the demo laptop. Model quality for structured JSON output is substantially lower than Claude claude-sonnet-4-6. Setup complexity is high for a hackathon. |
-| **OpenAI GPT-4o** | Comparable capability, but team has existing Anthropic API access. Claude's structured output (JSON mode) is well-suited to the response format. No meaningful quality difference for this use case. |
+| **Local LLM (Ollama/llama.cpp)** | Avoids API dependency, but requires significant GPU/CPU resources on the demo laptop. Model quality for structured JSON output is lower than GPT-4o. Setup complexity is high for a hackathon. |
 | **No AI — rules-only with static text** | Satisfies the scoring requirement but not the "clear explanation" and "suggested actions" requirements. The demonstration impact would be significantly reduced. |
 
 ### Mitigations
@@ -77,6 +92,6 @@ Use the Claude API with model `claude-sonnet-4-6` to generate natural language r
 |------|-----------|
 | API rate limits | SemaphoreSlim (5 concurrent), batch size 10, exponential backoff retry |
 | API unavailability | Fallback placeholder explanation with confidence "low"; scores unaffected |
-| API key exposure | Environment variable only; never committed; `.env.example` with placeholder |
+| API key/endpoint exposure | Environment variables only; never committed; `.env.example` with placeholder |
 | Non-determinism | Cache explanations; only regenerate when risk scores change |
 | User trust | Display deterministic signals alongside AI text; label as "AI-generated advisory" |

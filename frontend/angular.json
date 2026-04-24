@@ -30,6 +30,7 @@
                 "output": "assets"
               }
             ],
+            "inlineStyleLanguage": "scss",
             "styles": ["src/styles.scss"],
             "scripts": []
           },

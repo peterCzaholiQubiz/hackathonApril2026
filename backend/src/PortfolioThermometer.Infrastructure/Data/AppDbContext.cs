@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<RiskScore> RiskScores => Set<RiskScore>();
     public DbSet<RiskExplanation> RiskExplanations => Set<RiskExplanation>();
     public DbSet<SuggestedAction> SuggestedActions => Set<SuggestedAction>();
+    public DbSet<Connection> Connections => Set<Connection>();
+    public DbSet<MeterRead> MeterReads => Set<MeterRead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,5 +35,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new RiskScoreConfiguration());
         modelBuilder.ApplyConfiguration(new RiskExplanationConfiguration());
         modelBuilder.ApplyConfiguration(new SuggestedActionConfiguration());
+        modelBuilder.ApplyConfiguration(new ConnectionConfiguration());
+        modelBuilder.ApplyConfiguration(new MeterReadConfiguration());
     }
 }

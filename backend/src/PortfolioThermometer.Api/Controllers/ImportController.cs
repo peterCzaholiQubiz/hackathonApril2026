@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PortfolioThermometer.Api.Common;
+using PortfolioThermometer.Api.Configuration;
 using PortfolioThermometer.Core.Interfaces;
 
 namespace PortfolioThermometer.Api.Controllers;
@@ -8,53 +9,74 @@ namespace PortfolioThermometer.Api.Controllers;
 [Route("api/import")]
 public sealed class ImportController : ControllerBase
 {
-    private readonly ICrmImportService _importService;
-    private readonly IRiskScoringEngine _scoringEngine;
-    private readonly IClaudeExplanationService _explanationService;
-    private readonly IPortfolioAggregationService _aggregationService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ImportController> _logger;
+    private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
     // Tracks the status of the last import run (in-memory for simplicity)
     private static ImportStatus _lastStatus = new(false, null, null, null);
 
     public ImportController(
-        ICrmImportService importService,
-        IRiskScoringEngine scoringEngine,
-        IClaudeExplanationService explanationService,
-        IPortfolioAggregationService aggregationService,
-        ILogger<ImportController> logger)
+        IServiceScopeFactory scopeFactory,
+        ILogger<ImportController> logger,
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
-        _importService = importService;
-        _scoringEngine = scoringEngine;
-        _explanationService = explanationService;
-        _aggregationService = aggregationService;
+        _scopeFactory = scopeFactory;
         _logger = logger;
+        _configuration = configuration;
+        _environment = environment;
     }
 
     [HttpPost("trigger")]
-    public async Task<ActionResult<ApiResponse<object>>> TriggerImport(CancellationToken ct)
+    public ActionResult<ApiResponse<object>> TriggerImport(
+        [FromBody] TriggerImportRequest request,
+        CancellationToken ct)
     {
+        var crmDataPath = CrmDataPathResolver.Resolve(
+            request.CrmDataPath,
+            _configuration["CrmDataPath"],
+            _configuration["CrmDataRoot"],
+            _environment.ContentRootPath);
+
+        if (string.IsNullOrWhiteSpace(crmDataPath))
+            return BadRequest(ApiResponse<object>.Fail("CrmDataPath must resolve inside the configured CRM data root."));
+
+        if (!Directory.Exists(crmDataPath))
+        {
+            _logger.LogWarning("CRM data directory not found: {Path}", crmDataPath);
+            return BadRequest(ApiResponse<object>.Fail("CRM data directory not found."));
+        }
+
         if (_lastStatus.IsRunning)
             return Conflict(ApiResponse<object>.Fail("An import is already in progress."));
 
         _lastStatus = new ImportStatus(true, DateTimeOffset.UtcNow, null, null);
 
+
         _ = Task.Run(async () =>
         {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var importService = scope.ServiceProvider.GetRequiredService<ICrmImportService>();
+            var aggregationService = scope.ServiceProvider.GetRequiredService<IPortfolioAggregationService>();
+            var scoringEngine = scope.ServiceProvider.GetRequiredService<IRiskScoringEngine>();
+            var explanationService = scope.ServiceProvider.GetRequiredService<IClaudeExplanationService>();
+
             try
             {
-                _logger.LogInformation("Starting full import pipeline");
+                _logger.LogInformation("Starting full import pipeline from {Path}", crmDataPath);
 
-                var importResult = await _importService.ImportAllAsync(CancellationToken.None);
+                var importResult = await importService.ImportAllAsync(crmDataPath, CancellationToken.None);
                 _logger.LogInformation("Import complete: {Customers} customers", importResult.CustomersImported);
 
-                var snapshot = await _aggregationService.CreateSnapshotAsync(CancellationToken.None);
+                var snapshot = await aggregationService.CreateSnapshotAsync(CancellationToken.None);
                 _logger.LogInformation("Snapshot created: {Id}", snapshot.Id);
 
-                var scores = await _scoringEngine.ScoreAllCustomersAsync(snapshot.Id, CancellationToken.None);
+                var scores = await scoringEngine.ScoreAllCustomersAsync(snapshot.Id, CancellationToken.None);
                 _logger.LogInformation("Scored {Count} customers", scores.Count);
 
-                await _explanationService.GenerateExplanationsAsync(scores, CancellationToken.None);
+                await explanationService.GenerateExplanationsAsync(scores, CancellationToken.None);
                 _logger.LogInformation("Explanations generated");
 
                 _lastStatus = new ImportStatus(false, _lastStatus.StartedAt, DateTimeOffset.UtcNow, null);
@@ -80,4 +102,6 @@ public sealed class ImportController : ControllerBase
         DateTimeOffset? StartedAt,
         DateTimeOffset? CompletedAt,
         string? LastError);
+
+    public sealed record TriggerImportRequest(string? CrmDataPath);
 }
