@@ -1,0 +1,67 @@
+2026-04-24T08:27:29.917479356Z [inf]  
+2026-04-24T08:27:33.742930314Z [inf]  [35m[Region: europe-west4][0m
+2026-04-24T08:27:33.745363134Z [inf]  [35m=========================
+2026-04-24T08:27:33.745383479Z [inf]  Using Detected Dockerfile
+2026-04-24T08:27:33.745387354Z [inf]  =========================
+2026-04-24T08:27:33.745390527Z [inf]  [0m
+2026-04-24T08:27:33.745401376Z [inf]  context: kt5b-pZrg
+2026-04-24T08:27:33.879563242Z [inf]  [internal] load build definition from Dockerfile
+2026-04-24T08:27:33.879610222Z [inf]  [internal] load build definition from Dockerfile
+2026-04-24T08:27:33.879628288Z [inf]  [internal] load build definition from Dockerfile
+2026-04-24T08:27:33.879644164Z [inf]  [internal] load build definition from Dockerfile
+2026-04-24T08:27:33.888093568Z [inf]  [internal] load build definition from Dockerfile
+2026-04-24T08:27:33.889767245Z [inf]  [internal] load metadata for mcr.microsoft.com/dotnet/aspnet:10.0
+2026-04-24T08:27:33.889788524Z [inf]  [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0
+2026-04-24T08:27:34.083570967Z [inf]  [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0
+2026-04-24T08:27:34.090748610Z [inf]  [internal] load metadata for mcr.microsoft.com/dotnet/aspnet:10.0
+2026-04-24T08:27:34.091074252Z [inf]  [internal] load .dockerignore
+2026-04-24T08:27:34.091113365Z [inf]  [internal] load .dockerignore
+2026-04-24T08:27:34.091130829Z [inf]  [internal] load .dockerignore
+2026-04-24T08:27:34.091148255Z [inf]  [internal] load .dockerignore
+2026-04-24T08:27:34.098447695Z [inf]  [internal] load .dockerignore
+2026-04-24T08:27:34.101486999Z [inf]  [build 8/9] COPY . .
+2026-04-24T08:27:34.101508414Z [inf]  [build 7/9] RUN dotnet restore src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj
+2026-04-24T08:27:34.101519076Z [inf]  [build 6/9] COPY src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj                           src/PortfolioThermometer.Api/
+2026-04-24T08:27:34.101527017Z [inf]  [build 5/9] COPY src/PortfolioThermometer.Infrastructure/PortfolioThermometer.Infrastructure.csproj     src/PortfolioThermometer.Infrastructure/
+2026-04-24T08:27:34.101533458Z [inf]  [build 4/9] COPY src/PortfolioThermometer.Core/PortfolioThermometer.Core.csproj                         src/PortfolioThermometer.Core/
+2026-04-24T08:27:34.101547033Z [inf]  [runtime 4/4] COPY --from=build /app/publish .
+2026-04-24T08:27:34.101552937Z [inf]  [internal] load build context
+2026-04-24T08:27:34.101558788Z [inf]  [build 2/9] WORKDIR /source
+2026-04-24T08:27:34.101565031Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.101571051Z [inf]  [runtime 3/4] RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+2026-04-24T08:27:34.101576377Z [inf]  [runtime 2/4] WORKDIR /app
+2026-04-24T08:27:34.101589182Z [inf]  [build 9/9] RUN dotnet publish src/PortfolioThermometer.Api/PortfolioThermometer.Api.csproj     -c Release     -o /app/publish     --no-restore
+2026-04-24T08:27:34.101597828Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.101603539Z [inf]  [build 3/9] COPY nuget.config ./
+2026-04-24T08:27:34.101620700Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.101626822Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.101636385Z [inf]  [internal] load build context
+2026-04-24T08:27:34.110208007Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.110227207Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.110297477Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.111621997Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.112074212Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.112172452Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.112193340Z [inf]  [internal] load build context
+2026-04-24T08:27:34.141027110Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.143808802Z [inf]  [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:55e37c7795bfaf6b9cc5d77c155811d9569f529d86e20647704bc1d7dd9741d4
+2026-04-24T08:27:34.145322090Z [inf]  [internal] load build context
+2026-04-24T08:27:34.171509669Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:34.172945170Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:35.996434095Z [inf]  [runtime 2/4] WORKDIR /app
+2026-04-24T08:27:36.116457655Z [inf]  [runtime 2/4] WORKDIR /app
+2026-04-24T08:27:36.117935340Z [inf]  [runtime 3/4] RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+2026-04-24T08:27:36.198996885Z [inf]  /bin/sh: 1: addgroup: not found
+
+2026-04-24T08:27:36.224709521Z [err]  [runtime 3/4] RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+2026-04-24T08:27:36.230297809Z [inf]  [build 1/9] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8a90a473da5205a16979de99d2fc20975e922c68304f5c79d564e666dc3982fc
+2026-04-24T08:27:36.231238848Z [err]  [build 2/9] WORKDIR /source
+2026-04-24T08:27:36.246138791Z [err]  Dockerfile:27
+2026-04-24T08:27:36.246159917Z [err]  -------------------
+2026-04-24T08:27:36.246163802Z [err]  25 |
+2026-04-24T08:27:36.246167441Z [err]  26 |     # Non-root user for security
+2026-04-24T08:27:36.246172610Z [err]  27 | >>> RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+2026-04-24T08:27:36.246176120Z [err]  28 |     USER appuser
+2026-04-24T08:27:36.246179508Z [err]  29 |
+2026-04-24T08:27:36.246182839Z [err]  -------------------
+2026-04-24T08:27:36.246187130Z [err]  ERROR: failed to build: failed to solve: process "/bin/sh -c addgroup --system appgroup && adduser --system --ingroup appgroup appuser" did not complete successfully: exit code: 127
