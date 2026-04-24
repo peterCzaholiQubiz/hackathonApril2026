@@ -138,7 +138,14 @@ static string ToNpgsqlConnectionString(string databaseUrl)
                 continue;
             }
 
-            builder[key] = value;
+            try
+            {
+                builder[key] = value;
+            }
+            catch (ArgumentException)
+            {
+                // Ignore URL parameters that Npgsql does not support directly.
+            }
         }
     }
 
