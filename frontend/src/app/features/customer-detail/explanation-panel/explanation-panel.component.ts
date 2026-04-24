@@ -1,3 +1,4 @@
+import { TitleCasePipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { RiskExplanation, RiskType } from '../../../core/models/risk-explanation.model';
 import { HeatBadgeComponent } from '../../../shared/components/heat-badge/heat-badge.component';
@@ -19,7 +20,7 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 @Component({
   selector: 'app-explanation-panel',
   standalone: true,
-  imports: [HeatBadgeComponent],
+  imports: [HeatBadgeComponent, TitleCasePipe],
   template: `
     <div class="panel">
       <div class="panel__tabs">
