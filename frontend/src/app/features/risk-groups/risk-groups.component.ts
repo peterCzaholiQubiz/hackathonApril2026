@@ -124,8 +124,6 @@ import { LoadingSkeletonComponent } from '../../shared/components/loading-skelet
                           </div>
                           <p class="panel-block__text">{{ item.explanation }}</p>
                         </div>
-                      } @else {
-                        <p class="panel-block__empty">No AI explanation generated yet.</p>
                       }
 
                       @if (item.topAction) {
@@ -452,6 +450,7 @@ import { LoadingSkeletonComponent } from '../../shared/components/loading-skelet
       text-decoration: none;
       align-self: flex-start;
       padding-left: 4px;
+      padding-top: 4px;
 
       &:hover { text-decoration: underline; }
     }
