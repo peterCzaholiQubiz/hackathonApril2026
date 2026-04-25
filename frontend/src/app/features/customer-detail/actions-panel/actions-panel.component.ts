@@ -1,5 +1,5 @@
 import { UpperCasePipe } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { SuggestedAction, ActionType, Priority } from '../../../core/models/suggested-action.model';
 
 const ACTION_ICONS: Record<ActionType, string> = {
@@ -24,8 +24,21 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
   imports: [UpperCasePipe],
   template: `
     <div class="actions">
-      <h2 class="actions__title">Suggested Actions</h2>
-      @if (sorted.length === 0) {
+      <div class="actions__header">
+        <h2 class="actions__title">Suggested Actions</h2>
+        <button
+          class="btn-generate"
+          [disabled]="generating"
+          (click)="generateRequested.emit()"
+          title="Regenerate suggested actions using AI"
+        >
+          {{ generating ? 'Generating…' : '✨ Generate AI Actions' }}
+        </button>
+      </div>
+      @if (error) {
+        <p class="actions__error">{{ error }}</p>
+      }
+      @if (sorted.length === 0 && !generating) {
         <p class="actions__empty">No suggested actions available.</p>
       } @else {
         <div class="actions__list">
@@ -50,13 +63,22 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
   `,
   styles: [`
     .actions {
+      &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
       &__title {
         font-size: 13px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--color-text-muted);
-        margin-bottom: 16px;
+        margin: 0;
       }
 
       &__empty {
@@ -65,11 +87,33 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
         padding: 16px 0;
       }
 
+      &__error {
+        font-size: 13px;
+        color: var(--color-red);
+        margin: 0 0 12px;
+      }
+
       &__list {
         display: flex;
         flex-direction: column;
         gap: 10px;
       }
+    }
+
+    .btn-generate {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: background 150ms;
+      white-space: nowrap;
+
+      &:hover:not(:disabled) { background: var(--color-surface-3, #e5e7eb); }
+      &:disabled { opacity: 0.5; cursor: not-allowed; }
     }
 
     .action-card {
@@ -120,6 +164,9 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 })
 export class ActionsPanelComponent {
   @Input() actions: SuggestedAction[] = [];
+  @Input() generating = false;
+  @Input() error: string | null = null;
+  @Output() generateRequested = new EventEmitter<void>();
 
   get sorted(): SuggestedAction[] {
     return [...this.actions].sort(

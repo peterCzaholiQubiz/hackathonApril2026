@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PortfolioThermometer.Api.Common;
+using PortfolioThermometer.Api.ViewModels;
 using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
@@ -227,6 +228,161 @@ public sealed class RiskScoresController : ControllerBase
             .ToListAsync(ct);
 
         return Ok(ApiResponse<object>.Ok(groups));
+    }
+
+    [HttpGet("dimension-groups")]
+    public async Task<ActionResult<ApiResponse<RiskDimensionGroupsResponseVm?>>> GetDimensionGroups(
+        [FromQuery] int limit = 10,
+        CancellationToken ct = default)
+    {
+        if (limit is < 1 or > 100) limit = 10;
+
+        var snapshot = await _db.PortfolioSnapshots
+            .Where(s => s.CreatedAt > DateTimeOffset.MinValue)
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (snapshot is null)
+            return Ok(ApiResponse<RiskDimensionGroupsResponseVm?>.Ok(null));
+
+        // Load all risk scores for heat summary and per-dimension ordering
+        var allScores = await _db.RiskScores
+            .Where(r => r.SnapshotId == snapshot.Id)
+            .Select(r => new { r.Id, r.CustomerId, r.ChurnScore, r.PaymentScore, r.MarginScore, r.OverallScore, r.HeatLevel })
+            .ToListAsync(ct);
+
+        if (allScores.Count == 0)
+            return Ok(ApiResponse<RiskDimensionGroupsResponseVm?>.Ok(null));
+
+        var snapshotScoreIds = allScores.Select(s => s.Id).ToList();
+        var allCustomerIds = allScores.Select(s => s.CustomerId).Distinct().ToList();
+
+        // Monthly contract value per customer (active contracts)
+        var contractValueRows = await _db.Contracts
+            .Where(c => allCustomerIds.Contains(c.CustomerId)
+                     && c.Status == "active"
+                     && c.MonthlyValue != null)
+            .GroupBy(c => c.CustomerId)
+            .Select(g => new { CustomerId = g.Key, Total = g.Sum(c => (decimal)c.MonthlyValue!) })
+            .ToListAsync(ct);
+
+        var contractValues = contractValueRows.ToDictionary(x => x.CustomerId, x => x.Total);
+        decimal ContractValue(Guid id) => contractValues.TryGetValue(id, out var v) ? v : 0m;
+
+        // Portfolio-wide heat summary
+        var totalCount = allScores.Count;
+        var greenCustomerIds  = allScores.Where(s => s.HeatLevel == "green").Select(s => s.CustomerId).ToList();
+        var yellowCustomerIds = allScores.Where(s => s.HeatLevel == "yellow").Select(s => s.CustomerId).ToList();
+        var redCustomerIds    = allScores.Where(s => s.HeatLevel == "red").Select(s => s.CustomerId).ToList();
+
+        HeatBandVm MakeBand(List<Guid> ids) => new(
+            ids.Count,
+            totalCount > 0 ? Math.Round((decimal)ids.Count / totalCount * 100, 1) : 0m,
+            ids.Sum(ContractValue));
+
+        var heatSummary = new HeatSummaryVm(totalCount, MakeBand(greenCustomerIds), MakeBand(yellowCustomerIds), MakeBand(redCustomerIds));
+
+        // Top N per dimension
+        var topChurnIds   = allScores.OrderByDescending(s => s.ChurnScore).Take(limit).Select(s => s.CustomerId).ToList();
+        var topPaymentIds = allScores.OrderByDescending(s => s.PaymentScore).Take(limit).Select(s => s.CustomerId).ToList();
+        var topMarginIds  = allScores.OrderByDescending(s => s.MarginScore).Take(limit).Select(s => s.CustomerId).ToList();
+        var relevantIds   = topChurnIds.Union(topPaymentIds).Union(topMarginIds).ToList();
+
+        // Customer name/segment info
+        var customers = await _db.Customers
+            .Where(c => relevantIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.Name, c.CompanyName, c.Segment })
+            .ToDictionaryAsync(c => c.Id, ct);
+
+        // Explanations scoped to current snapshot
+        var explanationRows = await _db.RiskExplanations
+            .Where(e => relevantIds.Contains(e.CustomerId) && snapshotScoreIds.Contains(e.RiskScoreId))
+            .Select(e => new { e.CustomerId, e.RiskType, e.Explanation, e.Confidence, e.GeneratedAt })
+            .ToListAsync(ct);
+
+        var explanationLookup = explanationRows
+            .GroupBy(e => (e.CustomerId, e.RiskType))
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.GeneratedAt).First());
+
+        // Top suggested action per customer (high > medium > low priority)
+        var actionRows = await _db.SuggestedActions
+            .Where(a => relevantIds.Contains(a.CustomerId) && snapshotScoreIds.Contains(a.RiskScoreId))
+            .Select(a => new { a.CustomerId, a.ActionType, a.Priority, a.Title, a.Description, a.GeneratedAt })
+            .ToListAsync(ct);
+
+        static int PriorityWeight(string p) => p switch { "high" => 0, "medium" => 1, _ => 2 };
+
+        var actionLookup = actionRows
+            .GroupBy(a => a.CustomerId)
+            .ToDictionary(g => g.Key, g => g
+                .OrderBy(a => PriorityWeight(a.Priority))
+                .ThenByDescending(a => a.GeneratedAt)
+                .First());
+
+        var scoreMap = allScores.ToDictionary(s => s.CustomerId);
+
+        RiskDimensionItemVm BuildItem(Guid id, string dim)
+        {
+            var score = scoreMap[id];
+            customers.TryGetValue(id, out var customer);
+            explanationLookup.TryGetValue((id, dim), out var expl);
+            actionLookup.TryGetValue(id, out var action);
+
+            return new RiskDimensionItemVm(
+                id,
+                customer?.Name ?? string.Empty,
+                customer?.CompanyName,
+                customer?.Segment,
+                score.ChurnScore,
+                score.PaymentScore,
+                score.MarginScore,
+                score.OverallScore,
+                score.HeatLevel,
+                ContractValue(id),
+                expl?.Explanation,
+                expl?.Confidence,
+                action is null ? null : new RiskItemActionVm(
+                    action.ActionType, action.Priority, action.Title, action.Description));
+        }
+
+        RiskDimensionGroupVm BuildGroup(string dim, string label, List<Guid> ids)
+        {
+            var items = ids.Select(id => BuildItem(id, dim)).ToList();
+
+            // Portfolio-wide average for this dimension (all customers, not just top N)
+            decimal avgScore = allScores.Count == 0 ? 0m : Math.Round(
+                (decimal)allScores.Sum(s => dim switch
+                {
+                    "churn"   => s.ChurnScore,
+                    "payment" => s.PaymentScore,
+                    "margin"  => s.MarginScore,
+                    _         => s.OverallScore,
+                }) / allScores.Count, 1);
+
+            // All customers flagged (score >= 40) for this dimension across the full portfolio
+            var flaggedCustomerIds = dim switch
+            {
+                "churn"   => allScores.Where(s => s.ChurnScore >= 40).Select(s => s.CustomerId).ToList(),
+                "payment" => allScores.Where(s => s.PaymentScore >= 40).Select(s => s.CustomerId).ToList(),
+                "margin"  => allScores.Where(s => s.MarginScore >= 40).Select(s => s.CustomerId).ToList(),
+                _         => allScores.Where(s => s.OverallScore >= 40).Select(s => s.CustomerId).ToList(),
+            };
+
+            int totalFlagged = flaggedCustomerIds.Count;
+            decimal totalMonthlyValue = flaggedCustomerIds.Sum(ContractValue);
+
+            return new RiskDimensionGroupVm(dim, label, avgScore, totalFlagged, totalMonthlyValue, items);
+        }
+
+        var dimensions = new[]
+        {
+            BuildGroup("churn",   "Churn Risk",   topChurnIds),
+            BuildGroup("payment", "Payment Risk", topPaymentIds),
+            BuildGroup("margin",  "Margin Risk",  topMarginIds),
+        };
+
+        return Ok(ApiResponse<RiskDimensionGroupsResponseVm>.Ok(
+            new RiskDimensionGroupsResponseVm(heatSummary, dimensions)));
     }
 
     public sealed record RiskRunStatus(

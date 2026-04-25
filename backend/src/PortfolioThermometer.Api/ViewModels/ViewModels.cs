@@ -157,3 +157,49 @@ public sealed record PortfolioSnapshotVm(
     decimal AvgPaymentScore,
     decimal AvgMarginScore,
     string? SegmentBreakdown);
+
+// --- Risk Dimension Groups ---
+
+public sealed record HeatBandVm(
+    int Count,
+    decimal Pct,
+    decimal TotalMonthlyValue);
+
+public sealed record HeatSummaryVm(
+    int TotalCustomers,
+    HeatBandVm Green,
+    HeatBandVm Yellow,
+    HeatBandVm Red);
+
+public sealed record RiskItemActionVm(
+    string ActionType,
+    string Priority,
+    string Title,
+    string? Description);
+
+public sealed record RiskDimensionItemVm(
+    Guid CustomerId,
+    string Name,
+    string? CompanyName,
+    string? Segment,
+    int ChurnScore,
+    int PaymentScore,
+    int MarginScore,
+    int OverallScore,
+    string HeatLevel,
+    decimal MonthlyContractValue,
+    string? Explanation,
+    string? Confidence,
+    RiskItemActionVm? TopAction);
+
+public sealed record RiskDimensionGroupVm(
+    string Dimension,
+    string Label,
+    decimal AvgScore,
+    int TotalFlagged,
+    decimal TotalMonthlyValue,
+    IReadOnlyList<RiskDimensionItemVm> Items);
+
+public sealed record RiskDimensionGroupsResponseVm(
+    HeatSummaryVm HeatSummary,
+    IReadOnlyList<RiskDimensionGroupVm> Dimensions);
