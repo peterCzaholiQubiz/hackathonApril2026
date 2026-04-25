@@ -7,6 +7,7 @@ import { Customer, CustomerDetail, Interaction, Complaint } from '../models/cust
 import { CustomerConsumption, CustomerConsumptionQueryParams } from '../models/customer-consumption.model';
 import { CustomerPayments, CustomerPaymentsParams } from '../models/customer-payment.model';
 import { CustomerRisk } from '../models/customer-risk.model';
+import { SuggestedAction } from '../models/suggested-action.model';
 
 export interface CustomerListParams {
   segment?: string;
@@ -85,6 +86,13 @@ export class CustomerService {
     return this.http.get<ApiResponse<CustomerConsumption>>(
       `${this.env.apiUrl}/api/customers/${id}/consumption`,
       { params: httpParams }
+    );
+  }
+
+  generateActions(id: string): Observable<ApiResponse<SuggestedAction[]>> {
+    return this.http.post<ApiResponse<SuggestedAction[]>>(
+      `${this.env.apiUrl}/api/customers/${id}/actions/generate`,
+      {}
     );
   }
 

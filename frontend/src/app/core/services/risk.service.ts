@@ -17,6 +17,56 @@ export interface TopAtRiskItem {
   heatLevel: HeatLevel;
 }
 
+export interface HeatBand {
+  count: number;
+  pct: number;
+  totalMonthlyValue: number;
+}
+
+export interface HeatSummary {
+  totalCustomers: number;
+  green: HeatBand;
+  yellow: HeatBand;
+  red: HeatBand;
+}
+
+export interface RiskItemAction {
+  actionType: string;
+  priority: string;
+  title: string;
+  description: string | null;
+}
+
+export interface RiskDimensionItem {
+  customerId: string;
+  name: string;
+  companyName: string | null;
+  segment: string | null;
+  churnScore: number;
+  paymentScore: number;
+  marginScore: number;
+  overallScore: number;
+  heatLevel: HeatLevel;
+  monthlyContractValue: number;
+  explanation: string | null;
+  confidence: string | null;
+  topAction: RiskItemAction | null;
+}
+
+export interface RiskDimensionGroup {
+  dimension: string;
+  label: string;
+  avgScore: number;
+  totalFlagged: number;
+  totalMonthlyValue: number;
+  items: RiskDimensionItem[];
+}
+
+export interface RiskDimensionGroupsResponse {
+  heatSummary: HeatSummary;
+  dimensions: RiskDimensionGroup[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class RiskService {
   private readonly http = inject(HttpClient);
@@ -41,6 +91,14 @@ export class RiskService {
   getGroups(): Observable<ApiResponse<unknown>> {
     return this.http.get<ApiResponse<unknown>>(
       `${this.env.apiUrl}/api/risk/groups`
+    );
+  }
+
+  getRiskDimensionGroups(limit = 10): Observable<ApiResponse<RiskDimensionGroupsResponse | null>> {
+    const params = new HttpParams().set('limit', limit.toString());
+    return this.http.get<ApiResponse<RiskDimensionGroupsResponse | null>>(
+      `${this.env.apiUrl}/api/risk/dimension-groups`,
+      { params }
     );
   }
 }

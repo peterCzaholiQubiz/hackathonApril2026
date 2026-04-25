@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,6 +6,8 @@ using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.AzureOpenAi;
 using PortfolioThermometer.Infrastructure.AzureOpenAi.Prompts;
 using PortfolioThermometer.Infrastructure.Data;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PortfolioThermometer.Infrastructure.Services;
 
@@ -132,7 +133,7 @@ public sealed class AzureOpenAiExplanationService : IClaudeExplanationService
             var content = await _client.CompleteAsync(prompt, ct);
             if (content is not null)
             {
-                var actions = JsonSerializer.Deserialize<List<ActionDto>>(content, JsonOptions);
+                var actions = DeserializeActions(content);
                 if (actions?.Count > 0)
                     return actions.Select(a => CreateAction(score, a)).ToList();
             }
@@ -147,16 +148,16 @@ public sealed class AzureOpenAiExplanationService : IClaudeExplanationService
 
     private RiskExplanation CreateExplanation(
         RiskScore score, string riskType, string text, string confidence) => new()
-    {
-        Id = Guid.NewGuid(),
-        RiskScoreId = score.Id,
-        CustomerId = score.CustomerId,
-        RiskType = riskType,
-        Explanation = text,
-        Confidence = confidence,
-        GeneratedAt = DateTimeOffset.UtcNow,
-        ModelUsed = _options.Deployment
-    };
+        {
+            Id = Guid.NewGuid(),
+            RiskScoreId = score.Id,
+            CustomerId = score.CustomerId,
+            RiskType = riskType,
+            Explanation = text,
+            Confidence = confidence,
+            GeneratedAt = DateTimeOffset.UtcNow,
+            ModelUsed = _options.Deployment
+        };
 
     private static RiskExplanation FallbackExplanation(RiskScore score, string riskType, int scoreValue) => new()
     {
@@ -182,6 +183,108 @@ public sealed class AzureOpenAiExplanationService : IClaudeExplanationService
         GeneratedAt = DateTimeOffset.UtcNow
     };
 
+    public async Task<IReadOnlyList<SuggestedAction>> GenerateSuggestedActionsAsync(
+        Guid customerId, CancellationToken ct)
+    {
+        var customer = await _db.Customers.FindAsync([customerId], ct);
+        if (customer is null) return [];
+
+        var score = await _db.RiskScores
+            .Include(r => r.RiskExplanations)
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.ScoredAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (score is null) return [];
+
+        var recentPayments = await _db.Payments
+            .AsNoTracking()
+            .Where(p => p.CustomerId == customerId)
+            .OrderByDescending(p => p.PaymentDate)
+            .Take(50)
+            .Select(p => new { p.DaysLate })
+            .ToListAsync(ct);
+
+        var recentInteractions = await _db.Interactions
+            .AsNoTracking()
+            .Where(i => i.CustomerId == customerId)
+            .OrderByDescending(i => i.InteractionDate)
+            .Take(10)
+            .Select(i => new
+            {
+                Date = i.InteractionDate != null ? i.InteractionDate.Value.ToString("yyyy-MM-dd") : null,
+                i.Channel,
+                i.Sentiment,
+                i.Summary
+            })
+            .ToListAsync(ct);
+
+        var churnExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "churn")?.Explanation;
+        var paymentExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "payment")?.Explanation;
+        var marginExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "margin")?.Explanation;
+
+        var totalPayments = recentPayments.Count;
+        var latePayments = recentPayments.Count(p => p.DaysLate > 15);
+        var heavilyLate = recentPayments.Count(p => p.DaysLate > 30);
+        var avgDaysLate = totalPayments > 0 ? recentPayments.Average(p => p.DaysLate) : 0.0;
+
+        var interactions = recentInteractions
+            .Select(i => (i.Date, i.Channel, i.Sentiment, i.Summary))
+            .ToList();
+
+        var prompt = SuggestedActionsEnhancedPrompt.Build(
+            customer.Name, customer.Segment,
+            score.OverallScore, score.ChurnScore, score.PaymentScore, score.MarginScore,
+            score.HeatLevel,
+            churnExp, paymentExp, marginExp,
+            interactions,
+            totalPayments, latePayments, heavilyLate, avgDaysLate);
+
+        List<SuggestedAction> newActions;
+        try
+        {
+            var content = await _client.CompleteAsync(prompt, ct);
+            if (content is not null)
+            {
+                var parsed = DeserializeActions(content);
+                if (parsed?.Count > 0)
+                {
+                    newActions = parsed.Select(a => CreateAction(score, a)).ToList();
+                }
+                else
+                {
+                    newActions = [FallbackAction(score)];
+                }
+            }
+            else
+            {
+                newActions = [FallbackAction(score)];
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse suggested actions for customer {CustomerId}", customerId);
+            newActions = [FallbackAction(score)];
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var existing = _db.SuggestedActions.Where(a => a.RiskScoreId == score.Id);
+            _db.SuggestedActions.RemoveRange(existing);
+            _db.SuggestedActions.AddRange(newActions);
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+
+        return newActions;
+    }
+
     private static SuggestedAction FallbackAction(RiskScore score) => new()
     {
         Id = Guid.NewGuid(),
@@ -195,5 +298,76 @@ public sealed class AzureOpenAiExplanationService : IClaudeExplanationService
     };
 
     private sealed record ExplanationDto(string Explanation, string Confidence);
-    private sealed record ActionDto(string ActionType, string Priority, string Title, string? Description);
+
+    private List<ActionDto>? DeserializeActions(string content)
+    {
+        ActionsResponseDto response = ActionsDeserializer.Deserialize(content);
+
+        return response?.Actions;
+    }
+
+    public class ActionDto
+    {
+        [JsonPropertyName("action_type")]
+        public string ActionType { get; set; } = string.Empty;
+
+        [JsonPropertyName("priority")]
+        public string Priority { get; set; } = string.Empty;
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
+    }
+
+    public class ActionsResponseDto
+    {
+        [JsonPropertyName("actions")]
+        public List<ActionDto> Actions { get; set; } = new();
+    }
+
+    public static class ActionsDeserializer
+    {
+        private static readonly JsonSerializerOptions Options = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+
+        public static ActionsResponseDto Deserialize(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new ActionsResponseDto();
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                // Bare array: [{ ... }, ...]
+                var actions = JsonSerializer.Deserialize<List<ActionDto>>(json, Options) ?? [];
+                return new ActionsResponseDto { Actions = actions };
+            }
+
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("actions", out var actionsProp) && actionsProp.ValueKind == JsonValueKind.Array)
+                {
+                    // Wrapped: { "actions": [{ ... }] }
+                    var result = JsonSerializer.Deserialize<ActionsResponseDto>(json, Options);
+                    return result ?? new ActionsResponseDto();
+                }
+
+                // Single action object: { "action_type": "...", ... }
+                var single = JsonSerializer.Deserialize<ActionDto>(json, Options);
+                return single is not null
+                    ? new ActionsResponseDto { Actions = [single] }
+                    : new ActionsResponseDto();
+            }
+
+            return new ActionsResponseDto();
+        }
+    }
 }

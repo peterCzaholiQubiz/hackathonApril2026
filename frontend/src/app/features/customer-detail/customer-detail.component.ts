@@ -104,7 +104,12 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
           <div class="detail-page__bottom">
             <section class="card card--actions">
               @if (risk) {
-                <app-actions-panel [actions]="risk.suggestedActions" />
+                <app-actions-panel
+                  [actions]="risk.suggestedActions"
+                  [generating]="generatingActions"
+                  [error]="actionsError"
+                  (generateRequested)="generateActions()"
+                />
               } @else {
                 <div class="empty-state empty-state--compact">
                   <h2 class="empty-state__title">Suggested actions unavailable</h2>
@@ -271,6 +276,8 @@ export class CustomerDetailComponent implements OnInit {
   complaints: Complaint[] = [];
   loading = true;
   calculating = false;
+  generatingActions = false;
+  actionsError: string | null = null;
   error: string | null = null;
 
   get heatLevel() {
@@ -279,6 +286,26 @@ export class CustomerDetailComponent implements OnInit {
     if (s >= 70) return 'red' as const;
     if (s >= 40) return 'yellow' as const;
     return 'green' as const;
+  }
+
+  generateActions(): void {
+    if (!this.customer || this.generatingActions) return;
+    this.generatingActions = true;
+    this.actionsError = null;
+    this.customerSvc.generateActions(this.customer.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          if (this.risk && res.data) {
+            this.risk = { ...this.risk, suggestedActions: res.data };
+          }
+          this.generatingActions = false;
+        },
+        error: (err) => {
+          this.actionsError = err?.error?.error ?? err?.message ?? 'Failed to generate actions. Please try again.';
+          this.generatingActions = false;
+        },
+      });
   }
 
   calculateRisk(): void {

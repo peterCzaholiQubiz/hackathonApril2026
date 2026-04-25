@@ -414,6 +414,28 @@ public sealed class CustomersController(
         return Ok(ApiResponse<RiskScoreVm>.Ok(vm));
     }
 
+    [HttpPost("{id:guid}/actions/generate")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<SuggestedActionVm>>>> GenerateSuggestedActions(
+        Guid id, CancellationToken ct)
+    {
+        var exists = await db.Customers.AnyAsync(c => c.Id == id, ct);
+        if (!exists)
+            return NotFound(ApiResponse<IReadOnlyList<SuggestedActionVm>>.Fail($"Customer {id} not found."));
+
+        var hasRiskScore = await db.RiskScores.AnyAsync(r => r.CustomerId == id, ct);
+        if (!hasRiskScore)
+            return BadRequest(ApiResponse<IReadOnlyList<SuggestedActionVm>>.Fail(
+                "No risk score found for this customer. Please calculate a risk score first."));
+
+        var actions = await explanationService.GenerateSuggestedActionsAsync(id, ct);
+
+        var vms = actions.Select(a => new SuggestedActionVm(
+            a.Id, a.ActionType, a.Priority, a.Title, a.Description, a.GeneratedAt))
+            .ToList();
+
+        return Ok(ApiResponse<IReadOnlyList<SuggestedActionVm>>.Ok(vms));
+    }
+
     [HttpGet("{id:guid}/interactions")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<InteractionVm>>>> GetCustomerInteractions(
         Guid id,

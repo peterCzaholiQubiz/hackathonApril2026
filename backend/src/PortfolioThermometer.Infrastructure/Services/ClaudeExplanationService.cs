@@ -185,8 +185,7 @@ public sealed class ClaudeExplanationService : IClaudeExplanationService
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 var content = parsed?.Content?.FirstOrDefault()?.Text ?? "[]";
-                var actions = JsonSerializer.Deserialize<List<ClaudeAction>>(content,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var actions = DeserializeClaudeActions(content);
 
                 if (actions?.Count > 0)
                 {
@@ -225,6 +224,168 @@ public sealed class ClaudeExplanationService : IClaudeExplanationService
             }
         ];
     }
+
+    public async Task<IReadOnlyList<SuggestedAction>> GenerateSuggestedActionsAsync(
+        Guid customerId, CancellationToken ct)
+    {
+        var customer = await _db.Customers.FindAsync([customerId], ct);
+        if (customer is null) return [];
+
+        var score = await _db.RiskScores
+            .Include(r => r.RiskExplanations)
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.ScoredAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (score is null) return [];
+
+        var recentPayments = await _db.Payments
+            .AsNoTracking()
+            .Where(p => p.CustomerId == customerId)
+            .OrderByDescending(p => p.PaymentDate)
+            .Take(50)
+            .Select(p => new { p.DaysLate })
+            .ToListAsync(ct);
+
+        var recentInteractions = await _db.Interactions
+            .AsNoTracking()
+            .Where(i => i.CustomerId == customerId)
+            .OrderByDescending(i => i.InteractionDate)
+            .Take(10)
+            .Select(i => new
+            {
+                Date = i.InteractionDate != null ? i.InteractionDate.Value.ToString("yyyy-MM-dd") : null,
+                i.Channel,
+                i.Sentiment,
+                i.Summary
+            })
+            .ToListAsync(ct);
+
+        var churnExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "churn")?.Explanation;
+        var paymentExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "payment")?.Explanation;
+        var marginExp = score.RiskExplanations.FirstOrDefault(e => e.RiskType == "margin")?.Explanation;
+
+        var totalPayments = recentPayments.Count;
+        var latePayments = recentPayments.Count(p => p.DaysLate > 15);
+        var heavilyLate = recentPayments.Count(p => p.DaysLate > 30);
+        var avgDaysLate = totalPayments > 0 ? recentPayments.Average(p => p.DaysLate) : 0.0;
+
+        var interactionLines = recentInteractions.Count > 0
+            ? string.Join("\n", recentInteractions.Select(i =>
+                $"  - {i.Date ?? "?"} | {i.Channel ?? "?"} | sentiment: {i.Sentiment ?? "?"} | {(i.Summary ?? string.Empty)[..Math.Min((i.Summary ?? string.Empty).Length, 80)]}"))
+            : "  No recent interactions recorded.";
+
+        var prompt = $$"""
+            You are an advisory AI assistant for a portfolio management system.
+
+            Customer: "{{customer.Name}}" (segment: {{customer.Segment ?? "unknown"}})
+            Overall risk score: {{score.OverallScore}}/100 (heat: {{score.HeatLevel}})
+            Breakdown — Churn: {{score.ChurnScore}}/100 | Payment: {{score.PaymentScore}}/100 | Margin: {{score.MarginScore}}/100
+
+            Risk analysis:
+            - Churn risk: {{churnExp ?? "No explanation available."}}
+            - Payment risk: {{paymentExp ?? "No explanation available."}}
+            - Margin risk: {{marginExp ?? "No explanation available."}}
+
+            Payment behaviour (recent history):
+            - Total payments on record: {{totalPayments}}
+            - Payments > 15 days late: {{latePayments}}
+            - Payments > 30 days late: {{heavilyLate}}
+            - Average days late: {{avgDaysLate:F1}}
+
+            Recent interactions (last {{recentInteractions.Count}}):
+            {{interactionLines}}
+
+            Based on all data above, suggest 1-3 specific, concrete actions for the account manager.
+            Actions must be tailored to this customer's actual situation, not generic advice.
+
+            Action types (use exactly one of): outreach, discount, review, escalate, upsell
+            Priorities (use exactly one of): high, medium, low
+
+            Respond ONLY with a valid JSON array in this exact format:
+            [{ "action_type": "outreach", "priority": "high", "title": "Action title", "description": "Specific description" }]
+            """;
+
+        List<SuggestedAction> newActions;
+        try
+        {
+            var client = _httpClientFactory.CreateClient("ClaudeApi");
+            var requestBody = new
+            {
+                model = ModelId,
+                max_tokens = 1024,
+                messages = new[] { new { role = "user", content = prompt } }
+            };
+
+            var response = await client.PostAsJsonAsync("v1/messages", requestBody, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync(ct);
+                var parsed = JsonSerializer.Deserialize<ClaudeMessageResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                var content = parsed?.Content?.FirstOrDefault()?.Text ?? "[]";
+                var actions = DeserializeClaudeActions(content);
+
+                if (actions?.Count > 0)
+                {
+                    newActions = actions.Select(a => new SuggestedAction
+                    {
+                        Id = Guid.NewGuid(),
+                        RiskScoreId = score.Id,
+                        CustomerId = score.CustomerId,
+                        ActionType = a.ActionType,
+                        Priority = a.Priority,
+                        Title = a.Title,
+                        Description = a.Description,
+                        GeneratedAt = DateTimeOffset.UtcNow
+                    }).ToList();
+                }
+                else
+                {
+                    newActions = [FallbackSuggestedAction(score)];
+                }
+            }
+            else
+            {
+                newActions = [FallbackSuggestedAction(score)];
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate suggested actions for customer {CustomerId}", customerId);
+            newActions = [FallbackSuggestedAction(score)];
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var existing = _db.SuggestedActions.Where(a => a.RiskScoreId == score.Id);
+            _db.SuggestedActions.RemoveRange(existing);
+            _db.SuggestedActions.AddRange(newActions);
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+
+        return newActions;
+    }
+
+    private static SuggestedAction FallbackSuggestedAction(RiskScore score) => new()
+    {
+        Id = Guid.NewGuid(),
+        RiskScoreId = score.Id,
+        CustomerId = score.CustomerId,
+        ActionType = "review",
+        Priority = score.HeatLevel == "red" ? "high" : "medium",
+        Title = "Review customer account",
+        Description = "Schedule an account review to assess current status and risks.",
+        GeneratedAt = DateTimeOffset.UtcNow
+    };
 
     private async Task<ClaudeExplanationResponse?> CallClaudeAsync(string prompt, CancellationToken ct)
     {
@@ -274,5 +435,42 @@ public sealed class ClaudeExplanationService : IClaudeExplanationService
         public string Priority { get; set; } = "medium";
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
+    }
+
+    private sealed class ClaudeActionsWrapper
+    {
+        public List<ClaudeAction>? Actions { get; set; }
+    }
+
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static List<ClaudeAction>? DeserializeClaudeActions(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return null;
+
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        if (root.ValueKind == JsonValueKind.Array)
+            return JsonSerializer.Deserialize<List<ClaudeAction>>(content, SnakeCaseOptions);
+
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            if (root.TryGetProperty("actions", out var actionsProp) && actionsProp.ValueKind == JsonValueKind.Array)
+            {
+                var wrapper = JsonSerializer.Deserialize<ClaudeActionsWrapper>(content, SnakeCaseOptions);
+                return wrapper?.Actions;
+            }
+
+            // Single action object
+            var single = JsonSerializer.Deserialize<ClaudeAction>(content, SnakeCaseOptions);
+            return single is not null ? [single] : null;
+        }
+
+        return null;
     }
 }
