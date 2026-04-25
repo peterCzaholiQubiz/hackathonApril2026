@@ -1,8 +1,8 @@
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Core.Models;
 using PortfolioThermometer.Infrastructure.Data;
+using System.Text;
 
 namespace PortfolioThermometer.Infrastructure.Services;
 
@@ -191,24 +191,8 @@ public sealed class MeterReadGenerationService(AppDbContext db) : IMeterReadGene
         var electricityConnectionIds = electricityConnections
             .Select(connection => connection.ConnectionId)
             .ToList();
-        var blockedConnectionIds = await db.MeterReads
-            .AsNoTracking()
-            .Where(read =>
-                read.ConnectionId.HasValue &&
-                electricityConnectionIds.Contains(read.ConnectionId.Value) &&
-                read.Source != YearlyGeneratedSource &&
-                ((read.StartDate.HasValue && read.StartDate.Value < endUtc) || !read.StartDate.HasValue) &&
-                (!read.EndDate.HasValue || read.EndDate.Value > startUtc))
-            .Select(read => read.ConnectionId!.Value)
-            .Distinct()
-            .ToListAsync(ct);
-        var blockedConnectionIdSet = blockedConnectionIds.ToHashSet();
 
-        var availableConnections = electricityConnections
-            .Where(connection => !blockedConnectionIdSet.Contains(connection.ConnectionId))
-            .ToList();
-
-        var eligibleCustomerIds = availableConnections
+        var eligibleCustomerIds = electricityConnections
             .Select(connection => connection.CustomerId)
             .Distinct()
             .OrderBy(id => id)
@@ -236,7 +220,7 @@ public sealed class MeterReadGenerationService(AppDbContext db) : IMeterReadGene
             request.ProducerPercentage);
         var producerCustomerSet = producerCustomerIds.ToHashSet();
 
-        var connectionTargets = availableConnections
+        var connectionTargets = electricityConnections
             .Where(connection => customerLookup.ContainsKey(connection.CustomerId))
             .GroupBy(connection => connection.CustomerId)
             .SelectMany(group => group.Select((connection, index) => new ConnectionTarget(
