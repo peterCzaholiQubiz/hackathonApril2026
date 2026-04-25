@@ -103,16 +103,20 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
     .btn-generate {
       font-size: 12px;
       font-weight: 700;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-      background: var(--color-surface-2);
-      color: var(--color-text);
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #fff;
       cursor: pointer;
-      transition: background 150ms;
+      transition: opacity 150ms, box-shadow 150ms;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
 
-      &:hover:not(:disabled) { background: var(--color-surface-3, #e5e7eb); }
+      &:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45); }
       &:disabled { opacity: 0.5; cursor: not-allowed; }
     }
 

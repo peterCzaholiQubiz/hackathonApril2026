@@ -22,31 +22,37 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
           <h2 class="consumption-card__title">Meter Reads</h2>
         </div>
         <div class="consumption-card__header-right">
-          <div class="energy-toggle">
-            <button
-              class="energy-toggle__btn"
-              [class.energy-toggle__btn--active]="energyType === 'electricity'"
-              (click)="setEnergyType('electricity')"
-              title="Electricity (kWh)"
-            >
-              <span class="energy-toggle__icon">⚡</span>
-              <span class="energy-toggle__label">Electricity</span>
-              <span class="energy-toggle__unit">kWh</span>
-            </button>
-            <button
-              class="energy-toggle__btn"
-              [class.energy-toggle__btn--active]="energyType === 'gas'"
-              (click)="setEnergyType('gas')"
-              title="Gas (co3)"
-            >
-              <span class="energy-toggle__icon">🔥</span>
-              <span class="energy-toggle__label">Gas</span>
-              <span class="energy-toggle__unit">co3</span>
-            </button>
-          </div>
+          @if (!collapsed) {
+            <div class="energy-toggle">
+              <button
+                class="energy-toggle__btn"
+                [class.energy-toggle__btn--active]="energyType === 'electricity'"
+                (click)="setEnergyType('electricity')"
+                title="Electricity (kWh)"
+              >
+                <span class="energy-toggle__icon">⚡</span>
+                <span class="energy-toggle__label">Electricity</span>
+                <span class="energy-toggle__unit">kWh</span>
+              </button>
+              <button
+                class="energy-toggle__btn"
+                [class.energy-toggle__btn--active]="energyType === 'gas'"
+                (click)="setEnergyType('gas')"
+                title="Gas (co3)"
+              >
+                <span class="energy-toggle__icon">🔥</span>
+                <span class="energy-toggle__label">Gas</span>
+                <span class="energy-toggle__unit">co3</span>
+              </button>
+            </div>
+          }
+          <button class="collapse-btn" (click)="collapsed = !collapsed" [attr.aria-expanded]="!collapsed">
+            {{ collapsed ? '▸' : '▾' }}
+          </button>
         </div>
       </header>
 
+      @if (!collapsed) {
       <div class="consumption-card__controls">
         <div class="consumption-card__presets">
           @for (preset of presets; track preset.value) {
@@ -111,6 +117,7 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
         <div class="consumption-card__chart">
           <canvas baseChart [data]="chartData" [options]="chartOptions" [type]="'line'"></canvas>
         </div>
+      }
       }
     </section>
   `,
@@ -311,6 +318,8 @@ export class CustomerConsumptionCardComponent implements OnChanges {
   private readonly destroyRef = inject(DestroyRef);
 
   @Input({ required: true }) customerId = '';
+
+  collapsed = false;
 
   readonly presets: Array<{ value: RangePreset; label: string }> = [
     { value: '6m', label: '6M' },
