@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
-import { CustomerListParams } from '../../../core/services/customer.service';
+import { CustomerListParams, CustomerService } from '../../../core/services/customer.service';
 
 @Component({
   selector: 'app-customer-filters',
@@ -24,9 +24,9 @@ import { CustomerListParams } from '../../../core/services/customer.service';
         <label class="filters__label">Segment</label>
         <select class="filters__select" [(ngModel)]="segment" (ngModelChange)="emit()">
           <option value="">All Segments</option>
-          <option value="enterprise">Enterprise</option>
-          <option value="mid-market">Mid-Market</option>
-          <option value="smb">SMB</option>
+          @for (seg of segments; track seg) {
+            <option [value]="seg">{{ seg }}</option>
+          }
         </select>
       </div>
 
@@ -150,11 +150,14 @@ import { CustomerListParams } from '../../../core/services/customer.service';
 export class CustomerFiltersComponent implements OnInit, OnDestroy {
   @Output() filtersChanged = new EventEmitter<CustomerListParams>();
 
+  private readonly customerSvc = inject(CustomerService);
+
   searchValue = '';
   segment = '';
   heatLevel = '';
   sortBy = 'overallScore';
   sortDir = 'desc';
+  segments: string[] = [];
 
   readonly heatLevels = [
     { value: '', label: 'All' },
@@ -172,6 +175,10 @@ export class CustomerFiltersComponent implements OnInit, OnDestroy {
       distinctUntilChanged(),
       takeUntil(this.destroy$),
     ).subscribe(() => this.emit());
+
+    this.customerSvc.getSegments()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (res) => { this.segments = res.data ?? []; } });
   }
 
   ngOnDestroy(): void {

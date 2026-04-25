@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { Customer } from '../../core/models/customer.model';
 import {
+  GenerateActivitiesResponse,
   GenerateTestDataResponse,
   GenerateYearlyMeterReadsResponse,
   MeterReadGenerationSkippedCustomer,
@@ -36,6 +37,11 @@ import { TestDataService } from '../../core/services/test-data.service';
           <label class="control-group">
             <span class="control-label">Customer count</span>
             <input class="control-input" type="number" min="1" max="500" [(ngModel)]="syntheticCustomerCount" />
+          </label>
+
+          <label class="control-group">
+            <span class="control-label">At-risk customers</span>
+            <input class="control-input" type="number" min="0" max="500" [(ngModel)]="syntheticAtRiskCount" />
           </label>
 
           <label class="control-group control-group--checkbox">
@@ -221,6 +227,93 @@ import { TestDataService } from '../../core/services/test-data.service';
               </ul>
             </div>
           }
+        }
+      </section>
+
+      <section class="card test-data__card">
+        <div class="test-data__section-header">
+          <div>
+            <h2>Activity timeline data</h2>
+            <p>Generate interactions and complaints for selected customers to populate the activity timeline.</p>
+          </div>
+        </div>
+
+        <div class="test-data__controls">
+          <label class="control-group control-group--search">
+            <span class="control-label">Search customers</span>
+            <input
+              class="control-input"
+              type="search"
+              placeholder="Filter by name or company"
+              [disabled]="generatingActivities"
+              [(ngModel)]="activityCustomerSearch" />
+          </label>
+
+          <div class="control-actions">
+            <button class="btn btn--secondary" (click)="selectVisibleActivityCustomers()" [disabled]="loadingCustomers || generatingActivities">
+              Select visible
+            </button>
+            <button class="btn btn--ghost" (click)="clearActivitySelection()" [disabled]="activitySelectedCustomerIds.length === 0 || generatingActivities">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="test-data__selection-summary">
+          <span>{{ activitySelectedCustomerIds.length }} selected</span>
+          <span>{{ filteredActivityCustomers.length }} visible</span>
+          <span>{{ customers.length }} loaded</span>
+        </div>
+
+        @if (activitiesError) {
+          <div class="test-data__error">{{ activitiesError }}</div>
+        }
+
+        <div class="customer-picker" [class.customer-picker--loading]="loadingCustomers">
+          @if (loadingCustomers) {
+            <div class="customer-picker__empty">Loading customers…</div>
+          } @else if (filteredActivityCustomers.length === 0) {
+            <div class="customer-picker__empty">No customers match the current filter.</div>
+          } @else {
+            @for (customer of filteredActivityCustomers; track customer.id) {
+              <label class="customer-option">
+                <input
+                  type="checkbox"
+                  [disabled]="generatingActivities"
+                  [checked]="isActivitySelected(customer.id)"
+                  (change)="toggleActivityCustomer(customer.id, $any($event.target).checked)" />
+                <div class="customer-option__body">
+                  <span class="customer-option__name">{{ customer.companyName || customer.name }}</span>
+                  <span class="customer-option__meta">
+                    {{ customer.segment || 'Unsegmented' }} · {{ customer.crmExternalId }}
+                  </span>
+                </div>
+              </label>
+            }
+          }
+        </div>
+
+        <div class="test-data__footer">
+          <p class="test-data__hint">
+            Adds new interactions and complaints for each selected customer. Existing activity data is preserved.
+          </p>
+
+          <button class="btn btn--primary" (click)="generateActivities()" [disabled]="!canGenerateActivities">
+            @if (generatingActivities) { Generating… } @else { Generate activities }
+          </button>
+        </div>
+
+        @if (activitiesResponse) {
+          <div class="test-data__stats">
+            <div class="stat-card">
+              <span class="stat-card__label">Complaints</span>
+              <span class="stat-card__value">{{ activitiesResponse.complaintsCreated | number }}</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card__label">Interactions</span>
+              <span class="stat-card__value">{{ activitiesResponse.interactionsCreated | number }}</span>
+            </div>
+          </div>
         }
       </section>
     </div>
@@ -478,6 +571,7 @@ export class TestDataComponent implements OnInit {
   customerLoadError: string | null = null;
 
   syntheticCustomerCount = 25;
+  syntheticAtRiskCount = 5;
   syntheticRunPipeline = true;
   generatingSynthetic = false;
   syntheticError: string | null = null;
@@ -488,6 +582,23 @@ export class TestDataComponent implements OnInit {
   generatingYearly = false;
   yearlyError: string | null = null;
   yearlyResponse: GenerateYearlyMeterReadsResponse | null = null;
+
+  activityCustomerSearch = '';
+  activitySelectedCustomerIds: string[] = [];
+  generatingActivities = false;
+  activitiesError: string | null = null;
+  activitiesResponse: GenerateActivitiesResponse | null = null;
+
+  get filteredActivityCustomers(): Customer[] {
+    const term = this.activityCustomerSearch.trim().toLowerCase();
+    if (!term) {
+      return this.customers;
+    }
+    return this.customers.filter((customer) => {
+      const label = `${customer.companyName || ''} ${customer.name} ${customer.crmExternalId}`.toLowerCase();
+      return label.includes(term);
+    });
+  }
 
   get filteredCustomers(): Customer[] {
     const term = this.customerSearch.trim().toLowerCase();
@@ -517,7 +628,14 @@ export class TestDataComponent implements OnInit {
     return !this.generatingSynthetic
       && Number.isInteger(this.syntheticCustomerCount)
       && this.syntheticCustomerCount >= 1
-      && this.syntheticCustomerCount <= 500;
+      && this.syntheticCustomerCount <= 500
+      && Number.isInteger(this.syntheticAtRiskCount)
+      && this.syntheticAtRiskCount >= 0
+      && this.syntheticAtRiskCount <= 500;
+  }
+
+  get canGenerateActivities(): boolean {
+    return !this.generatingActivities && this.activitySelectedCustomerIds.length > 0;
   }
 
   get skippedCustomers(): MeterReadGenerationSkippedCustomer[] {
@@ -633,6 +751,7 @@ export class TestDataComponent implements OnInit {
 
     this.testDataService.generatePortfolioData({
       customerCount: this.syntheticCustomerCount,
+      atRiskCustomerCount: this.syntheticAtRiskCount,
       runPipeline: this.syntheticRunPipeline,
     }).subscribe({
       next: (response) => {
@@ -670,6 +789,63 @@ export class TestDataComponent implements OnInit {
         this.yearlyResponse = null;
         this.yearlyError = this.extractError(error, 'Yearly meter-read generation failed.');
         this.generatingYearly = false;
+      },
+    });
+  }
+
+  isActivitySelected(customerId: string): boolean {
+    return this.activitySelectedCustomerIds.includes(customerId);
+  }
+
+  toggleActivityCustomer(customerId: string, checked: boolean): void {
+    this.activitiesError = null;
+    this.activitiesResponse = null;
+    if (checked) {
+      if (!this.isActivitySelected(customerId)) {
+        this.activitySelectedCustomerIds = [...this.activitySelectedCustomerIds, customerId];
+      }
+    } else {
+      this.activitySelectedCustomerIds = this.activitySelectedCustomerIds.filter((id) => id !== customerId);
+    }
+  }
+
+  selectVisibleActivityCustomers(): void {
+    this.activitiesError = null;
+    this.activitiesResponse = null;
+    const nextSelection = [...this.activitySelectedCustomerIds];
+    for (const customer of this.filteredActivityCustomers) {
+      if (!nextSelection.includes(customer.id)) {
+        nextSelection.push(customer.id);
+      }
+    }
+    this.activitySelectedCustomerIds = nextSelection;
+  }
+
+  clearActivitySelection(): void {
+    this.activitySelectedCustomerIds = [];
+    this.activitiesError = null;
+    this.activitiesResponse = null;
+  }
+
+  generateActivities(): void {
+    if (!this.canGenerateActivities) {
+      return;
+    }
+
+    this.generatingActivities = true;
+    this.activitiesError = null;
+    this.activitiesResponse = null;
+
+    this.testDataService.generateActivities({
+      customerIds: this.activitySelectedCustomerIds,
+    }).subscribe({
+      next: (response) => {
+        this.activitiesResponse = response.data;
+        this.generatingActivities = false;
+      },
+      error: (error) => {
+        this.activitiesError = this.extractError(error, 'Activity generation failed.');
+        this.generatingActivities = false;
       },
     });
   }

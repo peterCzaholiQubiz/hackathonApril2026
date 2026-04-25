@@ -52,7 +52,7 @@ public sealed class TestDataGenerationService(AppDbContext db) : ITestDataGenera
     private static readonly string[] InvoiceStatuses =
         ["paid", "unpaid", "overdue", "partial"];
 
-    public async Task<TestDataGenerationResult> GenerateAsync(int customerCount, CancellationToken ct = default)
+    public async Task<TestDataGenerationResult> GenerateAsync(int customerCount, int atRiskCount = 0, CancellationToken ct = default)
     {
         var rng = new Random();
         var now = DateTimeOffset.UtcNow;
@@ -255,6 +255,33 @@ public sealed class TestDataGenerationService(AppDbContext db) : ITestDataGenera
             }
         }
 
+        for (var i = 0; i < atRiskCount; i++)
+        {
+            var customerId = Guid.NewGuid();
+            var name = GenerateCompanyName(rng);
+            var segment = Pick(rng, Segments);
+
+            var customer = new Customer
+            {
+                Id = customerId,
+                CrmExternalId = $"TEST-ATRISK-{customerId:N}",
+                Name = name,
+                CompanyName = name,
+                Email = $"contact@{name.ToLowerInvariant().Replace(" ", "")}.be",
+                Phone = $"+32{rng.Next(400_000_000, 499_999_999)}",
+                Segment = segment,
+                AccountManager = Pick(rng, AccountManagers),
+                OnboardingDate = today.AddDays(-730),
+                IsActive = true,
+                ImportedAt = now,
+                UpdatedAt = now,
+            };
+            customers.Add(customer);
+
+            GenerateAtRiskCustomerData(rng, customerId, today, now,
+                connections, meterReads, contracts, invoices, payments, complaints, interactions);
+        }
+
         await db.Customers.AddRangeAsync(customers, ct);
         await db.Connections.AddRangeAsync(connections, ct);
         await db.Contracts.AddRangeAsync(contracts, ct);
@@ -274,6 +301,328 @@ public sealed class TestDataGenerationService(AppDbContext db) : ITestDataGenera
             PaymentsCreated: payments.Count,
             ComplaintsCreated: complaints.Count,
             InteractionsCreated: interactions.Count);
+    }
+
+    private void GenerateAtRiskCustomerData(
+        Random rng,
+        Guid customerId,
+        DateOnly today,
+        DateTimeOffset now,
+        List<Connection> connections,
+        List<MeterRead> meterReads,
+        List<Contract> contracts,
+        List<Invoice> invoices,
+        List<Payment> payments,
+        List<Complaint> complaints,
+        List<Interaction> interactions)
+    {
+        // Connection
+        var conn = new Connection
+        {
+            Id = Guid.NewGuid(),
+            CrmExternalId = $"TEST-CONN-{Guid.NewGuid():N}",
+            CustomerId = customerId,
+            Ean = GenerateEan(rng),
+            ProductType = "Electricity",
+            DeliveryType = Pick(rng, DeliveryTypes),
+            ConnectionTypeId = rng.Next(1, 5),
+            ImportedAt = now,
+        };
+        connections.Add(conn);
+
+        // Meter reads: monthly for the last 12 months
+        var readEnd = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var readStart = readEnd.AddMonths(-12);
+        for (var m = readStart; m < readEnd; m = m.AddMonths(1))
+        {
+            var jitter = 0.85 + rng.NextDouble() * 0.30;
+            meterReads.Add(new MeterRead
+            {
+                Id = Guid.NewGuid(),
+                CrmExternalId = $"TEST-READ-{conn.Id:N}-{m:yyyyMM}",
+                ConnectionId = conn.Id,
+                StartDate = m,
+                EndDate = m.AddMonths(1),
+                Consumption = Math.Round((decimal)(500 * jitter), 2),
+                Unit = "kWh",
+                UsageType = "UsageHigh",
+                Direction = "Consumption",
+                Quality = "Measured",
+                Source = "TestDataGenerator",
+                ImportedAt = now,
+            });
+        }
+
+        // Contracts: two contracts with declining value; latest expires in 45 days with no auto-renew.
+        // Margin: latest (600) < previous (2500) → +30
+        // Margin: active avg value 600 < 1000 → +15
+        // Margin: short contract duration (165 days < 180) → +10
+        // Churn: active contract expiring in 45 days, no auto-renew → +25
+        contracts.Add(new Contract
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-CONTRACT-{Guid.NewGuid():N}",
+            ContractType = Pick(rng, ContractTypes),
+            StartDate = today.AddDays(-420),
+            EndDate = today.AddDays(-60),
+            MonthlyValue = 2500m,
+            Currency = "EUR",
+            Status = "expired",
+            AutoRenew = false,
+            ImportedAt = now,
+        });
+        contracts.Add(new Contract
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-CONTRACT-{Guid.NewGuid():N}",
+            ContractType = Pick(rng, ContractTypes),
+            StartDate = today.AddDays(-120),
+            EndDate = today.AddDays(45),
+            MonthlyValue = 600m,
+            Currency = "EUR",
+            Status = "active",
+            AutoRenew = false,
+            ImportedAt = now,
+        });
+
+        // Invoices — overdue (> 2 count → +25) and one severely overdue (DueDate < today-90 → +10)
+        for (var d = 1; d <= 4; d++)
+        {
+            var issuedDate = today.AddDays(-35 * d);
+            invoices.Add(new Invoice
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-INV-{Guid.NewGuid():N}",
+                InvoiceNumber = $"INV-TEST-{rng.Next(10000, 99999)}",
+                IssuedDate = issuedDate,
+                DueDate = issuedDate.AddDays(30),
+                Amount = Math.Round((decimal)(rng.Next(300, 800) + rng.NextDouble()), 2),
+                Currency = "EUR",
+                Status = "overdue",
+                ImportedAt = now,
+            });
+        }
+
+        // Partial invoices within last 6 months (IssuedDate >= today-180 → +15)
+        foreach (var daysAgo in new[] { 50, 80 })
+        {
+            var issuedDate = today.AddDays(-daysAgo);
+            invoices.Add(new Invoice
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-INV-{Guid.NewGuid():N}",
+                InvoiceNumber = $"INV-TEST-{rng.Next(10000, 99999)}",
+                IssuedDate = issuedDate,
+                DueDate = issuedDate.AddDays(30),
+                Amount = Math.Round((decimal)(rng.Next(300, 700) + rng.NextDouble()), 2),
+                Currency = "EUR",
+                Status = "partial",
+                ImportedAt = now,
+            });
+        }
+
+        // Paid invoices: prior-3-months window (paymentDate -115 to -135 days) → low DaysLate (15)
+        // PaymentDate = DueDate + 15 = IssuedDate + 45 → need IssuedDate such that IssuedDate+45 is in -90..-180
+        // IssuedDate -180,-170,-160 → DueDate -150,-140,-130 → PaymentDate -135,-125,-115 (all in prior-3 window)
+        foreach (var issuedOffset in new[] { -180, -170, -160 })
+        {
+            var issuedDate = today.AddDays(issuedOffset);
+            var dueDate = issuedDate.AddDays(30);
+            var amount = Math.Round((decimal)(rng.Next(200, 600) + rng.NextDouble()), 2);
+            var invoiceId = Guid.NewGuid();
+            invoices.Add(new Invoice
+            {
+                Id = invoiceId,
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-INV-{Guid.NewGuid():N}",
+                InvoiceNumber = $"INV-TEST-{rng.Next(10000, 99999)}",
+                IssuedDate = issuedDate,
+                DueDate = dueDate,
+                Amount = amount,
+                Currency = "EUR",
+                Status = "paid",
+                ImportedAt = now,
+            });
+            payments.Add(new Payment
+            {
+                Id = Guid.NewGuid(),
+                InvoiceId = invoiceId,
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-PAY-{Guid.NewGuid():N}",
+                PaymentDate = dueDate.AddDays(15),
+                Amount = amount,
+                DaysLate = 15,
+                ImportedAt = now,
+            });
+        }
+
+        // Paid invoices: last-3-months window (paymentDate -45 to -65 days) → high DaysLate (55)
+        // Average across all 6 paid = (15*3 + 55*3)/6 = 35 > 30 → +30; trend last3(55) > prior3(15) → +20
+        // IssuedDate -150,-140,-130 → DueDate -120,-110,-100 → PaymentDate -65,-55,-45
+        foreach (var issuedOffset in new[] { -150, -140, -130 })
+        {
+            var issuedDate = today.AddDays(issuedOffset);
+            var dueDate = issuedDate.AddDays(30);
+            var amount = Math.Round((decimal)(rng.Next(200, 600) + rng.NextDouble()), 2);
+            var invoiceId = Guid.NewGuid();
+            invoices.Add(new Invoice
+            {
+                Id = invoiceId,
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-INV-{Guid.NewGuid():N}",
+                InvoiceNumber = $"INV-TEST-{rng.Next(10000, 99999)}",
+                IssuedDate = issuedDate,
+                DueDate = dueDate,
+                Amount = amount,
+                Currency = "EUR",
+                Status = "paid",
+                ImportedAt = now,
+            });
+            payments.Add(new Payment
+            {
+                Id = Guid.NewGuid(),
+                InvoiceId = invoiceId,
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-PAY-{Guid.NewGuid():N}",
+                PaymentDate = dueDate.AddDays(55),
+                Amount = amount,
+                DaysLate = 55,
+                ImportedAt = now,
+            });
+        }
+
+        // Complaints: high-severity recent (→ +20 churn) + billing category (→ +25 margin)
+        complaints.Add(new Complaint
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-COMPL-{Guid.NewGuid():N}",
+            CreatedDate = today.AddDays(-rng.Next(10, 60)),
+            ResolvedDate = null,
+            Category = "billing",
+            Severity = "high",
+            Description = "Invoice amount incorrect - billing dispute ongoing",
+            ImportedAt = now,
+        });
+        complaints.Add(new Complaint
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-COMPL-{Guid.NewGuid():N}",
+            CreatedDate = today.AddDays(-rng.Next(20, 100)),
+            ResolvedDate = null,
+            Category = "service",
+            Severity = "high",
+            Description = "Service interruption unresolved - customer threatening to leave",
+            ImportedAt = now,
+        });
+
+        // Interactions: more in prior-90 window than recent-90 (→ +20 churn)
+        // Prior 90–175 days ago: 5 outbound interactions
+        for (var j = 0; j < 5; j++)
+        {
+            interactions.Add(new Interaction
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = customerId,
+                CrmExternalId = $"TEST-INT-{Guid.NewGuid():N}",
+                InteractionDate = today.AddDays(-rng.Next(91, 175)),
+                Channel = Pick(rng, Channels),
+                Direction = "outbound",
+                Summary = Pick(rng, InteractionSummaries),
+                Sentiment = "neutral",
+                ImportedAt = now,
+            });
+        }
+
+        // Recent 90 days: 2 inbound interactions with negative sentiment
+        // No outbound in recent window → +10 churn (no outbound contact 60+ days)
+        // Negative sentiment → +15 churn
+        interactions.Add(new Interaction
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-INT-{Guid.NewGuid():N}",
+            InteractionDate = today.AddDays(-rng.Next(5, 40)),
+            Channel = "phone",
+            Direction = "inbound",
+            Summary = "Customer expressing intent to cancel contract",
+            Sentiment = "negative",
+            ImportedAt = now,
+        });
+        interactions.Add(new Interaction
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CrmExternalId = $"TEST-INT-{Guid.NewGuid():N}",
+            InteractionDate = today.AddDays(-rng.Next(50, 85)),
+            Channel = "email",
+            Direction = "inbound",
+            Summary = "Invoice dispute escalation received",
+            Sentiment = "negative",
+            ImportedAt = now,
+        });
+    }
+
+    public async Task<ActivityGenerationResult> GenerateActivitiesAsync(
+        IReadOnlyList<Guid> customerIds,
+        CancellationToken ct = default)
+    {
+        var rng = new Random();
+        var now = DateTimeOffset.UtcNow;
+        var today = DateOnly.FromDateTime(now.DateTime);
+
+        var complaints = new List<Complaint>();
+        var interactions = new List<Interaction>();
+
+        foreach (var customerId in customerIds)
+        {
+            var complaintCount = rng.Next(1, 5);
+            for (var c = 0; c < complaintCount; c++)
+            {
+                var createdDate = today.AddDays(-rng.Next(10, 400));
+                var isResolved = rng.NextDouble() > 0.35;
+                complaints.Add(new Complaint
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customerId,
+                    CrmExternalId = $"TEST-COMPL-{Guid.NewGuid():N}",
+                    CreatedDate = createdDate,
+                    ResolvedDate = isResolved ? createdDate.AddDays(rng.Next(1, 30)) : null,
+                    Category = Pick(rng, ComplaintCategories),
+                    Severity = Pick(rng, ComplaintSeverities),
+                    Description = Pick(rng, ComplaintDescriptions),
+                    ImportedAt = now,
+                });
+            }
+
+            var interactionCount = rng.Next(2, 11);
+            for (var c = 0; c < interactionCount; c++)
+            {
+                interactions.Add(new Interaction
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customerId,
+                    CrmExternalId = $"TEST-INT-{Guid.NewGuid():N}",
+                    InteractionDate = today.AddDays(-rng.Next(1, 500)),
+                    Channel = Pick(rng, Channels),
+                    Direction = Pick(rng, Directions),
+                    Summary = Pick(rng, InteractionSummaries),
+                    Sentiment = Pick(rng, Sentiments),
+                    ImportedAt = now,
+                });
+            }
+        }
+
+        await db.Complaints.AddRangeAsync(complaints, ct);
+        await db.Interactions.AddRangeAsync(interactions, ct);
+        await db.SaveChangesAsync(ct);
+
+        return new ActivityGenerationResult(complaints.Count, interactions.Count);
     }
 
     private static string GenerateCompanyName(Random rng)

@@ -52,7 +52,15 @@ public sealed class CustomersController(
             ("segment", true) => query.OrderByDescending(c => c.Segment),
             ("onboarding", false) => query.OrderBy(c => c.OnboardingDate),
             ("onboarding", true) => query.OrderByDescending(c => c.OnboardingDate),
-            _ => query.OrderBy(c => c.Name)
+            ("overallscore", false) => query.OrderBy(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.OverallScore).FirstOrDefault()),
+            ("overallscore", true) => query.OrderByDescending(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.OverallScore).FirstOrDefault()),
+            ("churnscore", false) => query.OrderBy(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.ChurnScore).FirstOrDefault()),
+            ("churnscore", true) => query.OrderByDescending(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.ChurnScore).FirstOrDefault()),
+            ("paymentscore", false) => query.OrderBy(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.PaymentScore).FirstOrDefault()),
+            ("paymentscore", true) => query.OrderByDescending(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.PaymentScore).FirstOrDefault()),
+            ("marginscore", false) => query.OrderBy(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.MarginScore).FirstOrDefault()),
+            ("marginscore", true) => query.OrderByDescending(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.MarginScore).FirstOrDefault()),
+            _ => query.OrderByDescending(c => c.RiskScores.OrderByDescending(r => r.ScoredAt).Select(r => (int?)r.OverallScore).FirstOrDefault())
         };
 
         var total = await query.CountAsync(ct);
@@ -75,6 +83,19 @@ public sealed class CustomersController(
 
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
         return Ok(ApiResponse<IReadOnlyList<CustomerSummaryVm>>.Ok(vms, meta));
+    }
+
+    [HttpGet("segments")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<string>>>> GetSegments(CancellationToken ct)
+    {
+        var segments = await db.Customers
+            .Where(c => c.IsActive && c.Segment != null)
+            .Select(c => c.Segment!)
+            .Distinct()
+            .OrderBy(s => s)
+            .ToListAsync(ct);
+
+        return Ok(ApiResponse<IReadOnlyList<string>>.Ok(segments));
     }
 
     [HttpGet("{id:guid}")]
