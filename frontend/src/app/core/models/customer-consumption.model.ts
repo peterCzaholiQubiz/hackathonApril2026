@@ -15,6 +15,7 @@ export interface CustomerConsumption {
 export interface CustomerConsumptionPoint {
   month: string;
   consumption: number;
+  production: number;
   unit: string;
   quality: string;
   qualityBreakdown: CustomerConsumptionQualityBreakdown[];

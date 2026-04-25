@@ -61,7 +61,7 @@ public sealed class CustomersControllerConsumptionTests
     }
 
     [Fact]
-    public async Task GetCustomerConsumption_AggregatesMonthlyConsumptionAndMixedQuality()
+    public async Task GetCustomerConsumption_AggregatesMonthlyConsumptionAndProduction()
     {
         await using var db = CreateDbContext();
         var customerId = await SeedCustomerWithConsumptionAsync(db);
@@ -70,7 +70,7 @@ public sealed class CustomersControllerConsumptionTests
         var result = await controller.GetCustomerConsumption(
             customerId,
             new DateOnly(2026, 1, 1),
-            new DateOnly(2026, 2, 28),
+            new DateOnly(2026, 3, 31),
             null,
             CancellationToken.None);
 
@@ -82,11 +82,12 @@ public sealed class CustomersControllerConsumptionTests
         var data = payload.Data!;
         data.SelectedUnit.Should().Be("kWh");
         data.AvailableUnits.Should().BeEquivalentTo(["kWh", "m3"], options => options.WithStrictOrdering());
-        data.Points.Should().HaveCount(2);
+        data.Points.Should().HaveCount(3);
 
         var january = data.Points[0];
         january.Month.Should().Be("2026-01-01");
         january.Consumption.Should().Be(15m);
+        january.Production.Should().Be(3m);
         january.Quality.Should().Be("Mixed");
         january.QualityBreakdown.Should().HaveCount(2);
         january.QualityBreakdown.Should().ContainSingle(q => q.Quality == "Estimated" && q.ReadCount == 1 && q.Consumption == 5m);
@@ -95,7 +96,15 @@ public sealed class CustomersControllerConsumptionTests
         var february = data.Points[1];
         february.Month.Should().Be("2026-02-01");
         february.Consumption.Should().Be(11m);
+        february.Production.Should().Be(0m);
         february.Quality.Should().Be("Measured");
+
+        var march = data.Points[2];
+        march.Month.Should().Be("2026-03-01");
+        march.Consumption.Should().Be(0m);
+        march.Production.Should().Be(6m);
+        march.Quality.Should().Be("No consumption");
+        march.QualityBreakdown.Should().BeEmpty();
     }
 
     [Fact]
@@ -122,7 +131,63 @@ public sealed class CustomersControllerConsumptionTests
         data.Points.Should().HaveCount(1);
         data.Points[0].Month.Should().Be("2026-01-01");
         data.Points[0].Consumption.Should().Be(7m);
+        data.Points[0].Production.Should().Be(4m);
         data.Points[0].Quality.Should().Be("Estimated");
+    }
+
+    [Fact]
+    public async Task GetCustomerConsumption_DerivesUnitFromConnectionProductType_WhenReadUnitIsMissing()
+    {
+        await using var db = CreateDbContext();
+        var customerId = Guid.NewGuid();
+        var connectionId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        db.Customers.Add(new Customer
+        {
+            Id = customerId,
+            CrmExternalId = "CUST-NULL-UNIT",
+            Name = "Unitless Import",
+            IsActive = true,
+            ImportedAt = now,
+            UpdatedAt = now,
+        });
+
+        db.Connections.Add(new Connection
+        {
+            Id = connectionId,
+            CrmExternalId = "CONN-NULL-UNIT",
+            CustomerId = customerId,
+            Ean = "541000000000000003",
+            ProductType = "Electricity",
+            ImportedAt = now,
+        });
+
+        db.MeterReads.AddRange(
+            CreateMeterRead(connectionId, new DateTimeOffset(2026, 1, 5, 0, 0, 0, TimeSpan.Zero), 8m, null, "Measured"),
+            CreateMeterRead(connectionId, new DateTimeOffset(2026, 1, 6, 0, 0, 0, TimeSpan.Zero), 2m, null, "Actual", direction: "Production"));
+
+        await db.SaveChangesAsync();
+
+        var controller = new CustomersController(db, new Mock<IRiskScoringEngine>().Object, new Mock<IClaudeExplanationService>().Object);
+
+        var result = await controller.GetCustomerConsumption(
+            customerId,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 31),
+            null,
+            CancellationToken.None);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var payload = ok.Value.Should().BeOfType<ApiResponse<CustomerConsumptionVm>>().Subject;
+        payload.Data.Should().NotBeNull();
+
+        var data = payload.Data!;
+        data.SelectedUnit.Should().Be("kWh");
+        data.AvailableUnits.Should().ContainSingle().Which.Should().Be("kWh");
+        data.Points.Should().ContainSingle();
+        data.Points[0].Consumption.Should().Be(8m);
+        data.Points[0].Production.Should().Be(2m);
     }
 
     private static AppDbContext CreateDbContext()
@@ -175,6 +240,8 @@ public sealed class CustomersControllerConsumptionTests
             CreateMeterRead(electricityConnectionId, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), 10m, "kWh", "Measured"),
             CreateMeterRead(electricityConnectionId, new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero), 5m, "kWh", "Estimated"),
             CreateMeterRead(electricityConnectionId, new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), 11m, "kWh", "Measured"),
+            CreateMeterRead(electricityConnectionId, new DateTimeOffset(2026, 1, 12, 0, 0, 0, TimeSpan.Zero), 3m, "kWh", "Measured", direction: "Production"),
+            CreateMeterRead(electricityConnectionId, new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 6m, "kWh", "Actual", direction: "Production"),
             CreateMeterRead(gasConnectionId, new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), 7m, "m3", "Estimated"),
             CreateMeterRead(gasConnectionId, new DateTimeOffset(2026, 1, 20, 0, 0, 0, TimeSpan.Zero), 4m, "m3", "Estimated", direction: "Production"),
             CreateMeterRead(Guid.NewGuid(), new DateTimeOffset(2026, 1, 5, 0, 0, 0, TimeSpan.Zero), 99m, "kWh", "Measured"));
@@ -187,7 +254,7 @@ public sealed class CustomersControllerConsumptionTests
         Guid connectionId,
         DateTimeOffset startDate,
         decimal consumption,
-        string unit,
+        string? unit,
         string quality,
         string direction = "Consumption") =>
         new()

@@ -361,7 +361,19 @@ export class CustomerConsumptionCardComponent implements OnChanges {
   }
 
   setEnergyType(type: 'electricity' | 'gas'): void {
+    if (this.energyType === type) {
+      return;
+    }
+
     this.energyType = type;
+
+    const preferredUnit = this.getPreferredUnitForEnergyType(type);
+    if (preferredUnit && preferredUnit !== this.selectedUnit) {
+      this.selectedUnit = preferredUnit;
+      this.loadConsumption();
+      return;
+    }
+
     if (this.points.length > 0) {
       this.buildChart(this.points);
     }
@@ -414,6 +426,7 @@ export class CustomerConsumptionCardComponent implements OnChanges {
         const data = response.data;
         this.availableUnits = data?.availableUnits ?? [];
         this.selectedUnit = data?.selectedUnit ?? '';
+        this.syncEnergyTypeWithUnit(this.selectedUnit);
         this.points = data?.points ?? [];
 
         if (data?.from) this.fromDate = data.from;
@@ -444,42 +457,64 @@ export class CustomerConsumptionCardComponent implements OnChanges {
   private buildChart(points: CustomerConsumptionPoint[]): void {
     const cf = this.conversionFactor;
     const isGas = this.energyType === 'gas';
+    const showProduction = this.isElectricityUnit(this.selectedUnit) && points.some((point) => point.production > 0);
+
+    const datasets: ChartData<'line'>['datasets'] = [
+      {
+        label: `Consumption (${this.displayUnit})`,
+        data: points.map((point) => point.consumption * cf),
+        borderColor: isGas ? '#f97316' : '#0f766e',
+        backgroundColor: isGas ? 'rgba(249, 115, 22, 0.16)' : 'rgba(15, 118, 110, 0.16)',
+        pointBackgroundColor: isGas ? '#ea580c' : '#115e59',
+        pointBorderColor: '#ffffff',
+        pointHoverBackgroundColor: isGas ? '#f97316' : '#0f766e',
+        pointHoverBorderColor: '#ffffff',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 3,
+        tension: 0.25,
+        fill: true,
+      },
+    ];
+
+    if (showProduction) {
+      datasets.push({
+        label: `Production (${this.displayUnit})`,
+        data: points.map((point) => point.production * cf),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+        pointBackgroundColor: '#d97706',
+        pointBorderColor: '#ffffff',
+        pointHoverBackgroundColor: '#f59e0b',
+        pointHoverBorderColor: '#ffffff',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 3,
+        tension: 0.25,
+        fill: false,
+      });
+    }
 
     this.chartData = {
       labels: points.map((point) => this.formatMonth(point.month)),
-      datasets: [
-        {
-          label: `Consumption (${this.displayUnit})`,
-          data: points.map((point) => point.consumption * cf),
-          borderColor: isGas ? '#f97316' : '#0f766e',
-          backgroundColor: isGas ? 'rgba(249, 115, 22, 0.16)' : 'rgba(15, 118, 110, 0.16)',
-          pointBackgroundColor: isGas ? '#ea580c' : '#115e59',
-          pointBorderColor: '#ffffff',
-          pointHoverBackgroundColor: isGas ? '#f97316' : '#0f766e',
-          pointHoverBorderColor: '#ffffff',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 3,
-          tension: 0.25,
-          fill: true,
-        },
-      ],
+      datasets,
     };
 
-    this.chartOptions = this.createChartOptions(this.displayUnit);
+    this.chartOptions = this.createChartOptions(this.displayUnit, showProduction);
   }
 
-  private createChartOptions(unitLabel: string): ChartOptions<'line'> {
+  private createChartOptions(unitLabel: string, showLegend = false): ChartOptions<'line'> {
     return {
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
-        mode: 'nearest',
+        mode: 'index',
         intersect: false,
       },
       plugins: {
         legend: {
-          display: false,
+          display: showLegend,
+          position: 'top',
         },
         tooltip: {
           callbacks: {
@@ -498,7 +533,9 @@ export class CustomerConsumptionCardComponent implements OnChanges {
           beginAtZero: true,
           title: {
             display: true,
-            text: unitLabel ? `Consumption (${unitLabel})` : 'Consumption',
+            text: showLegend
+              ? (unitLabel ? `Consumption / Production (${unitLabel})` : 'Consumption / Production')
+              : (unitLabel ? `Consumption (${unitLabel})` : 'Consumption'),
           },
         },
       },
@@ -509,8 +546,9 @@ export class CustomerConsumptionCardComponent implements OnChanges {
     const point = this.points[item.dataIndex];
     if (!point) return '';
 
-    const value = point.consumption * this.conversionFactor;
-    return `Consumption: ${value.toFixed(2)} ${this.displayUnit}`;
+    const isProductionSeries = item.dataset.label?.startsWith('Production') ?? false;
+    const value = (isProductionSeries ? point.production : point.consumption) * this.conversionFactor;
+    return `${isProductionSeries ? 'Production' : 'Consumption'}: ${value.toFixed(2)} ${this.displayUnit}`;
   }
 
   private buildTooltipAfterBody(items: TooltipItem<'line'>[]): string[] {
@@ -519,7 +557,11 @@ export class CustomerConsumptionCardComponent implements OnChanges {
 
     const cf = this.conversionFactor;
     const unit = this.displayUnit;
-    const lines = [`Quality: ${point.quality}`];
+    if (point.consumption <= 0) {
+      return [];
+    }
+
+    const lines: string[] = [`Quality: ${point.quality}`];
     if (point.quality === 'Mixed') {
       lines.push(
         ...point.qualityBreakdown.map((entry) =>
@@ -544,5 +586,31 @@ export class CustomerConsumptionCardComponent implements OnChanges {
     const month = `${value.getMonth() + 1}`.padStart(2, '0');
     const day = `${value.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private syncEnergyTypeWithUnit(unit: string): void {
+    if (this.isGasUnit(unit)) {
+      this.energyType = 'gas';
+      return;
+    }
+
+    if (this.isElectricityUnit(unit)) {
+      this.energyType = 'electricity';
+    }
+  }
+
+  private getPreferredUnitForEnergyType(type: 'electricity' | 'gas'): string | null {
+    return this.availableUnits.find((unit) =>
+      type === 'electricity' ? this.isElectricityUnit(unit) : this.isGasUnit(unit)
+    ) ?? null;
+  }
+
+  private isElectricityUnit(unit: string): boolean {
+    return unit.trim().toLowerCase() === 'kwh';
+  }
+
+  private isGasUnit(unit: string): boolean {
+    const normalizedUnit = unit.trim().toLowerCase();
+    return normalizedUnit === 'm3' || normalizedUnit === 'co3';
   }
 }

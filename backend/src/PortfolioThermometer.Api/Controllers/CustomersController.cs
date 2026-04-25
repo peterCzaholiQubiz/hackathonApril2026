@@ -209,23 +209,31 @@ public sealed class CustomersController(
             .Where(m =>
                 m.ConnectionId.HasValue &&
                 connectionIds.Contains(m.ConnectionId.Value) &&
-                m.Direction == "Consumption" &&
                 m.StartDate.HasValue &&
                 m.StartDate.Value >= fromUtc &&
                 m.StartDate.Value < toExclusiveUtc &&
                 m.Consumption.HasValue &&
-                !string.IsNullOrWhiteSpace(m.Unit))
+                (m.Direction == "Consumption" || m.Direction == "Production") &&
+                (!string.IsNullOrWhiteSpace(m.Unit) || m.Connection!.ProductType == "Electricity" || m.Connection!.ProductType == "Gas"))
             .Select(m => new
             {
                 StartDate = m.StartDate!.Value,
                 Consumption = m.Consumption!.Value,
-                Unit = m.Unit!,
+                Unit = !string.IsNullOrWhiteSpace(m.Unit)
+                    ? m.Unit!
+                    : m.Connection!.ProductType == "Gas"
+                        ? "m3"
+                        : m.Connection!.ProductType == "Electricity"
+                            ? "kWh"
+                            : null,
+                Direction = m.Direction!,
                 Quality = string.IsNullOrWhiteSpace(m.Quality) ? "Unknown" : m.Quality!
             })
+            .Where(m => !string.IsNullOrWhiteSpace(m.Unit))
             .ToListAsync(ct);
 
         var availableUnits = rows
-            .Select(r => r.Unit)
+            .Select(r => r.Unit!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(u => u, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -240,12 +248,14 @@ public sealed class CustomersController(
                 [])));
         }
 
-        string? selectedUnit;
+        string selectedUnit;
         if (!string.IsNullOrWhiteSpace(unit))
         {
-            selectedUnit = availableUnits.FirstOrDefault(u => string.Equals(u, unit, StringComparison.OrdinalIgnoreCase));
-            if (selectedUnit is null)
+            var requestedUnit = availableUnits.FirstOrDefault(u => string.Equals(u, unit, StringComparison.OrdinalIgnoreCase));
+            if (requestedUnit is null)
                 return BadRequest(ApiResponse<CustomerConsumptionVm>.Fail($"Unit '{unit}' is not available in the selected interval."));
+
+            selectedUnit = requestedUnit;
         }
         else
         {
@@ -258,7 +268,11 @@ public sealed class CustomersController(
             .OrderBy(g => g.Key)
             .Select(g =>
             {
-                var qualityBreakdown = g
+                var consumptionRows = g
+                    .Where(item => string.Equals(item.Direction, "Consumption", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var qualityBreakdown = consumptionRows
                     .GroupBy(item => item.Quality, StringComparer.OrdinalIgnoreCase)
                     .Select(group => new CustomerConsumptionQualityBreakdownVm(
                         group.Key,
@@ -267,13 +281,21 @@ public sealed class CustomersController(
                     .OrderBy(item => item.Quality, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                var quality = qualityBreakdown.Count == 1
-                    ? qualityBreakdown[0].Quality
-                    : "Mixed";
+                var quality = qualityBreakdown.Count switch
+                {
+                    0 => "No consumption",
+                    1 => qualityBreakdown[0].Quality,
+                    _ => "Mixed"
+                };
+
+                var production = g
+                    .Where(item => string.Equals(item.Direction, "Production", StringComparison.OrdinalIgnoreCase))
+                    .Sum(item => item.Consumption);
 
                 return new CustomerConsumptionPointVm(
                     g.Key.ToString("yyyy-MM-dd"),
-                    Math.Round(g.Sum(item => item.Consumption), 2),
+                    Math.Round(consumptionRows.Sum(item => item.Consumption), 2),
+                    Math.Round(production, 2),
                     selectedUnit,
                     quality,
                     qualityBreakdown);

@@ -237,6 +237,7 @@ public sealed class MeterReadGenerationService(AppDbContext db) : IMeterReadGene
         var producerCustomerSet = producerCustomerIds.ToHashSet();
 
         var connectionTargets = availableConnections
+            .Where(connection => customerLookup.ContainsKey(connection.CustomerId))
             .GroupBy(connection => connection.CustomerId)
             .SelectMany(group => group.Select((connection, index) => new ConnectionTarget(
                 group.Key,

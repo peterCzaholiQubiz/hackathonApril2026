@@ -133,6 +133,7 @@ public sealed record CustomerConsumptionVm(
 public sealed record CustomerConsumptionPointVm(
     string Month,
     decimal Consumption,
+    decimal Production,
     string Unit,
     string Quality,
     IReadOnlyList<CustomerConsumptionQualityBreakdownVm> QualityBreakdown);
