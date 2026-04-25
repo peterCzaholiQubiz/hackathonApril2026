@@ -158,17 +158,23 @@ public sealed class RiskScoresController : ControllerBase
         if (limit is < 1 or > 100)
             limit = 10;
 
-        var snapshot = await _db.PortfolioSnapshots
-            .Where(s => s.CreatedAt > DateTimeOffset.MinValue)
-            .OrderByDescending(s => s.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+        // Use latest score per active customer — consistent with PortfolioController
+        var latestScoreIds = await _db.RiskScores
+            .Where(r => r.Customer.IsActive)
+            .GroupBy(r => r.CustomerId)
+            .Select(g => g
+                .OrderByDescending(s => s.ScoredAt)
+                .ThenByDescending(s => s.Id)
+                .Select(s => s.Id)
+                .First())
+            .ToListAsync(ct);
 
-        if (snapshot is null)
+        if (latestScoreIds.Count == 0)
             return Ok(ApiResponse<object?>.Ok(null));
 
         var query = _db.RiskScores
             .Include(r => r.Customer)
-            .Where(r => r.SnapshotId == snapshot.Id);
+            .Where(r => latestScoreIds.Contains(r.Id));
 
         var ordered = type.ToLowerInvariant() switch
         {
@@ -237,24 +243,30 @@ public sealed class RiskScoresController : ControllerBase
     {
         if (limit is < 1 or > 100) limit = 10;
 
-        var snapshot = await _db.PortfolioSnapshots
-            .Where(s => s.CreatedAt > DateTimeOffset.MinValue)
-            .OrderByDescending(s => s.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+        // Use latest risk score per active customer (same strategy as PortfolioController)
+        // so that a partial re-scoring run does not wipe out existing data for unscored customers.
+        var latestScoreIds = await _db.RiskScores
+            .Where(r => r.Customer.IsActive)
+            .GroupBy(r => r.CustomerId)
+            .Select(g => g
+                .OrderByDescending(s => s.ScoredAt)
+                .ThenByDescending(s => s.Id)
+                .Select(s => s.Id)
+                .First())
+            .ToListAsync(ct);
 
-        if (snapshot is null)
+        if (latestScoreIds.Count == 0)
             return Ok(ApiResponse<RiskDimensionGroupsResponseVm?>.Ok(null));
 
-        // Load all risk scores for heat summary and per-dimension ordering
+        // Load all latest risk scores
         var allScores = await _db.RiskScores
-            .Where(r => r.SnapshotId == snapshot.Id)
+            .Where(r => latestScoreIds.Contains(r.Id))
             .Select(r => new { r.Id, r.CustomerId, r.ChurnScore, r.PaymentScore, r.MarginScore, r.OverallScore, r.HeatLevel })
             .ToListAsync(ct);
 
         if (allScores.Count == 0)
             return Ok(ApiResponse<RiskDimensionGroupsResponseVm?>.Ok(null));
 
-        var snapshotScoreIds = allScores.Select(s => s.Id).ToList();
         var allCustomerIds = allScores.Select(s => s.CustomerId).Distinct().ToList();
 
         // Monthly contract value per customer (active contracts)
@@ -294,9 +306,9 @@ public sealed class RiskScoresController : ControllerBase
             .Select(c => new { c.Id, c.Name, c.CompanyName, c.Segment })
             .ToDictionaryAsync(c => c.Id, ct);
 
-        // Explanations scoped to current snapshot
+        // Explanations scoped to the latest scores we loaded
         var explanationRows = await _db.RiskExplanations
-            .Where(e => relevantIds.Contains(e.CustomerId) && snapshotScoreIds.Contains(e.RiskScoreId))
+            .Where(e => relevantIds.Contains(e.CustomerId) && latestScoreIds.Contains(e.RiskScoreId))
             .Select(e => new { e.CustomerId, e.RiskType, e.Explanation, e.Confidence, e.GeneratedAt })
             .ToListAsync(ct);
 
@@ -306,7 +318,7 @@ public sealed class RiskScoresController : ControllerBase
 
         // Top suggested action per customer (high > medium > low priority)
         var actionRows = await _db.SuggestedActions
-            .Where(a => relevantIds.Contains(a.CustomerId) && snapshotScoreIds.Contains(a.RiskScoreId))
+            .Where(a => relevantIds.Contains(a.CustomerId) && latestScoreIds.Contains(a.RiskScoreId))
             .Select(a => new { a.CustomerId, a.ActionType, a.Priority, a.Title, a.Description, a.GeneratedAt })
             .ToListAsync(ct);
 
