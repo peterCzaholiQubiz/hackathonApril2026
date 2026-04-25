@@ -122,4 +122,53 @@ public sealed class PortfolioController(AppDbContext db) : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(new { segmentBreakdown = snapshot.SegmentBreakdown }));
     }
+
+    [HttpGet("energy-heatmap")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<EnergyHeatmapCellVm>>>> GetEnergyHeatmap(
+        [FromQuery] string unit = "kWh",
+        [FromQuery] string direction = "Consumption",
+        CancellationToken ct = default)
+    {
+        var normalizedUnit = unit.Equals("m3", StringComparison.OrdinalIgnoreCase) ? "m3" : "kWh";
+        var normalizedDirection = direction.Equals("Production", StringComparison.OrdinalIgnoreCase)
+            ? "Production"
+            : "Consumption";
+
+        // Derive expected ProductType from the requested unit
+        var expectedProductType = normalizedUnit == "kWh" ? "Electricity" : "Gas";
+
+        // Single JOIN query: active customers → connections → meter reads
+        // Unit matching handles both explicit Unit values and null Units derived from ProductType
+        var rows = await db.MeterReads
+            .AsNoTracking()
+            .Where(m =>
+                m.ConnectionId.HasValue &&
+                m.Connection!.CustomerId.HasValue &&
+                m.Connection.Customer!.IsActive &&
+                m.StartDate.HasValue &&
+                m.Consumption.HasValue &&
+                m.Consumption.Value > 0 &&
+                m.Direction == normalizedDirection &&
+                (m.Unit == normalizedUnit ||
+                 (m.Unit == null && m.Connection.ProductType == expectedProductType)))
+            .Select(m => new
+            {
+                Year = m.StartDate!.Value.Year,
+                Month = m.StartDate!.Value.Month,
+                Consumption = m.Consumption!.Value,
+            })
+            .ToListAsync(ct);
+
+        var cells = rows
+            .GroupBy(r => new { r.Year, r.Month })
+            .Select(g => new EnergyHeatmapCellVm(
+                g.Key.Year,
+                g.Key.Month,
+                Math.Round(g.Sum(r => r.Consumption), 2)))
+            .OrderBy(c => c.Year)
+            .ThenBy(c => c.Month)
+            .ToList();
+
+        return Ok(ApiResponse<IReadOnlyList<EnergyHeatmapCellVm>>.Ok(cells));
+    }
 }

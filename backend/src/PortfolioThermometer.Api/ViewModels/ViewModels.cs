@@ -203,3 +203,24 @@ public sealed record RiskDimensionGroupVm(
 public sealed record RiskDimensionGroupsResponseVm(
     HeatSummaryVm HeatSummary,
     IReadOnlyList<RiskDimensionGroupVm> Dimensions);
+
+// --- Customer Scatter Data (all customers for heatmap) ---
+
+public sealed record CustomerScatterPointVm(
+    Guid CustomerId,
+    string Name,
+    string? CompanyName,
+    string? Segment,
+    int ChurnScore,
+    int PaymentScore,
+    int MarginScore,
+    int OverallScore,
+    string HeatLevel,
+    decimal MonthlyContractValue);
+
+// --- Portfolio Energy Heatmap ---
+
+public sealed record EnergyHeatmapCellVm(
+    int Year,
+    int Month,
+    decimal Total);

@@ -9,7 +9,8 @@ import { LoadingSkeletonComponent } from '../../shared/components/loading-skelet
 import { PortfolioHeatmapComponent } from './portfolio-heatmap/portfolio-heatmap.component';
 import { SegmentBreakdownComponent } from './segment-breakdown/segment-breakdown.component';
 import { TopAtRiskComponent } from './top-at-risk/top-at-risk.component';
-import { RiskTrendComponent } from './risk-trend/risk-trend.component';
+import { AllCustomerHeatmapComponent } from './all-customer-heatmap/all-customer-heatmap.component';
+import { EnergyHeatmapComponent } from './energy-heatmap/energy-heatmap.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -21,7 +22,8 @@ import { RiskTrendComponent } from './risk-trend/risk-trend.component';
     PortfolioHeatmapComponent,
     SegmentBreakdownComponent,
     TopAtRiskComponent,
-    RiskTrendComponent,
+    AllCustomerHeatmapComponent,
+    EnergyHeatmapComponent,
   ],
   template: `
     @if (loading) {
@@ -33,7 +35,6 @@ import { RiskTrendComponent } from './risk-trend/risk-trend.component';
           <div class="card"><app-loading-skeleton type="chart" /></div>
           <div class="card"><app-loading-skeleton type="chart" /></div>
           <div class="card" style="grid-column:span 2"><app-loading-skeleton type="table" /></div>
-          <div class="card" style="grid-column:span 2"><app-loading-skeleton type="chart" /></div>
         </div>
       </div>
     } @else if (error) {
@@ -72,7 +73,13 @@ import { RiskTrendComponent } from './risk-trend/risk-trend.component';
             <app-top-at-risk [customers]="topAtRisk" />
           </div>
           <div class="card dashboard__full">
-            <app-risk-trend [history]="history" />
+            <app-all-customer-heatmap />
+          </div>
+          <div class="card">
+            <app-energy-heatmap direction="Consumption" colorScheme="blue" />
+          </div>
+          <div class="card">
+            <app-energy-heatmap direction="Production" colorScheme="green" />
           </div>
         </div>
       </div>
@@ -170,18 +177,15 @@ export class DashboardComponent implements OnInit {
   error: string | null = null;
   snapshot: PortfolioSnapshot | null = null;
   topAtRisk: TopAtRiskItem[] = [];
-  history: PortfolioSnapshot[] = [];
 
   ngOnInit(): void {
     forkJoin({
       current: this.portfolioSvc.getCurrent(),
       topAtRisk: this.riskSvc.getTopAtRisk('overall', 10),
-      history: this.portfolioSvc.getHistory(),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ current, topAtRisk, history }) => {
+      next: ({ current, topAtRisk }) => {
         this.snapshot = current.data;
         this.topAtRisk = topAtRisk.data ?? [];
-        this.history = history.data ?? [];
         this.loading = false;
       },
       error: (err) => {
