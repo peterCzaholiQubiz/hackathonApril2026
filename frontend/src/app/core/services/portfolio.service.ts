@@ -1,9 +1,15 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ENVIRONMENT } from '../tokens/environment.token';
 import { ApiResponse } from '../models/api-response.model';
 import { PortfolioSnapshot } from '../models/portfolio-snapshot.model';
+
+export interface EnergyHeatmapCell {
+  year: number;
+  month: number;
+  total: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {
@@ -25,6 +31,14 @@ export class PortfolioService {
   getSegments(): Observable<ApiResponse<Record<string, unknown>>> {
     return this.http.get<ApiResponse<Record<string, unknown>>>(
       `${this.env.apiUrl}/api/portfolio/segments`
+    );
+  }
+
+  getEnergyHeatmap(unit: 'kWh' | 'm3', direction: 'Consumption' | 'Production'): Observable<ApiResponse<EnergyHeatmapCell[]>> {
+    const params = new HttpParams().set('unit', unit).set('direction', direction);
+    return this.http.get<ApiResponse<EnergyHeatmapCell[]>>(
+      `${this.env.apiUrl}/api/portfolio/energy-heatmap`,
+      { params }
     );
   }
 }

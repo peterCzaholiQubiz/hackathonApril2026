@@ -397,6 +397,72 @@ public sealed class RiskScoresController : ControllerBase
             new RiskDimensionGroupsResponseVm(heatSummary, dimensions)));
     }
 
+    [HttpGet("scatter-data")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<CustomerScatterPointVm>>>> GetScatterData(
+        CancellationToken ct)
+    {
+        // Latest risk score per active customer
+        var latestScoreIds = await _db.RiskScores
+            .Where(r => r.Customer.IsActive)
+            .GroupBy(r => r.CustomerId)
+            .Select(g => g
+                .OrderByDescending(s => s.ScoredAt)
+                .ThenByDescending(s => s.Id)
+                .Select(s => s.Id)
+                .First())
+            .ToListAsync(ct);
+
+        if (latestScoreIds.Count == 0)
+            return Ok(ApiResponse<IReadOnlyList<CustomerScatterPointVm>>.Ok([]));
+
+        var customerIds = await _db.RiskScores
+            .Where(r => latestScoreIds.Contains(r.Id))
+            .Select(r => r.CustomerId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        // Monthly contract value per customer (active contracts)
+        var contractValues = await _db.Contracts
+            .Where(c => customerIds.Contains(c.CustomerId)
+                     && c.Status == "active"
+                     && c.MonthlyValue != null)
+            .GroupBy(c => c.CustomerId)
+            .Select(g => new { CustomerId = g.Key, Total = g.Sum(c => (decimal)c.MonthlyValue!) })
+            .ToDictionaryAsync(x => x.CustomerId, x => x.Total, ct);
+
+        var results = await _db.RiskScores
+            .Include(r => r.Customer)
+            .Where(r => latestScoreIds.Contains(r.Id))
+            .Select(r => new
+            {
+                r.CustomerId,
+                r.Customer.Name,
+                r.Customer.CompanyName,
+                r.Customer.Segment,
+                r.ChurnScore,
+                r.PaymentScore,
+                r.MarginScore,
+                r.OverallScore,
+                r.HeatLevel,
+            })
+            .ToListAsync(ct);
+
+        var vms = results.Select(r => new CustomerScatterPointVm(
+            r.CustomerId,
+            r.Name,
+            r.CompanyName,
+            r.Segment,
+            r.ChurnScore,
+            r.PaymentScore,
+            r.MarginScore,
+            r.OverallScore,
+            r.HeatLevel,
+            contractValues.TryGetValue(r.CustomerId, out var v) ? v : 0m))
+            .ToList();
+
+        return Ok(ApiResponse<IReadOnlyList<CustomerScatterPointVm>>.Ok(vms));
+    }
+
     public sealed record RiskRunStatus(
         bool IsRunning,
         DateTimeOffset? StartedAt,

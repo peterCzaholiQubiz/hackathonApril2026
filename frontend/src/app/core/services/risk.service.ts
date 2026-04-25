@@ -67,6 +67,19 @@ export interface RiskDimensionGroupsResponse {
   dimensions: RiskDimensionGroup[];
 }
 
+export interface CustomerScatterPoint {
+  customerId: string;
+  name: string;
+  companyName: string | null;
+  segment: string | null;
+  churnScore: number;
+  paymentScore: number;
+  marginScore: number;
+  overallScore: number;
+  heatLevel: HeatLevel;
+  monthlyContractValue: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RiskService {
   private readonly http = inject(HttpClient);
@@ -99,6 +112,12 @@ export class RiskService {
     return this.http.get<ApiResponse<RiskDimensionGroupsResponse | null>>(
       `${this.env.apiUrl}/api/risk/dimension-groups`,
       { params }
+    );
+  }
+
+  getScatterData(): Observable<ApiResponse<CustomerScatterPoint[]>> {
+    return this.http.get<ApiResponse<CustomerScatterPoint[]>>(
+      `${this.env.apiUrl}/api/risk/scatter-data`
     );
   }
 }

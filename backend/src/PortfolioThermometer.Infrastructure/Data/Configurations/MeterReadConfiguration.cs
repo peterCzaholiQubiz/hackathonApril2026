@@ -26,6 +26,7 @@ public class MeterReadConfiguration : IEntityTypeConfiguration<MeterRead>
         builder.HasIndex(m => m.CrmExternalId).IsUnique().HasDatabaseName("uq_meter_reads_crm_id");
         builder.HasIndex(m => m.ConnectionId).HasDatabaseName("idx_meter_reads_connection_id");
         builder.HasIndex(m => m.StartDate).HasDatabaseName("idx_meter_reads_start_date");
+        builder.HasIndex(m => new { m.ConnectionId, m.Direction }).HasDatabaseName("idx_meter_reads_connection_direction");
 
         builder.HasOne(m => m.Connection)
                .WithMany()
