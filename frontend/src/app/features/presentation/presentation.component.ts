@@ -11,7 +11,7 @@ interface Slide {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="slideshow" [attr.data-slide]="current()">
+    <div class="slideshow" [attr.data-slide]="current()" [class.is-fullscreen]="isFullscreen()">
 
       <!-- Navigation -->
       <div class="nav-bar">
@@ -34,15 +34,34 @@ interface Slide {
         </button>
 
         <span class="slide-counter">{{ current() + 1 }} / {{ slides.length }}</span>
+
+        <button class="nav-btn fullscreen-btn" (click)="toggleFullscreen()" [title]="isFullscreen() ? 'Exit fullscreen (F)' : 'Fullscreen (F)'">
+          @if (!isFullscreen()) {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          } @else {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+            </svg>
+          }
+        </button>
       </div>
 
       <!-- Slides Container -->
       <div class="slides-viewport">
+        <!-- Energy background orbs -->
+        <div class="energy-bg" aria-hidden="true">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+          <div class="energy-grid"></div>
+        </div>
 
         <!-- SLIDE 1: Title & Problem Statement -->
         <div class="slide slide-1" [class.active]="current() === 0" [class.prev]="current() > 0">
           <div class="slide-content centered">
-            <div class="badge">Hackathon April 2026</div>
+            <div class="badge">⚡ Hackathon April 2026</div>
             <h1 class="title-main">
               <span class="gradient-text">Customer Portfolio</span>
               <br>Thermometer
@@ -289,7 +308,7 @@ interface Slide {
               <div class="pulse-ring ring-1"></div>
               <div class="pulse-ring ring-2"></div>
               <div class="pulse-ring ring-3"></div>
-              <div class="demo-icon">▶</div>
+              <div class="demo-icon">⚡</div>
             </div>
             <h1 class="demo-title">Time for <span class="gradient-text">Demo</span></h1>
             <p class="demo-subtitle">Let's see the Customer Portfolio Thermometer in action</p>
@@ -354,9 +373,18 @@ interface Slide {
       gap: 20px;
       padding: 14px 32px;
       background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1px solid rgba(245,158,11,0.2);
       flex-shrink: 0;
       z-index: 10;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #f59e0b55, #06b6d455, transparent);
+      }
     }
 
     .nav-btn {
@@ -373,13 +401,22 @@ interface Slide {
       transition: all 150ms;
 
       &:hover:not(:disabled) {
-        background: var(--color-border);
-        color: var(--color-text);
+        border-color: #f59e0b;
+        color: #f59e0b;
+        box-shadow: 0 0 12px rgba(245,158,11,0.3);
       }
 
       &:disabled {
-        opacity: 0.35;
+        opacity: 0.3;
         cursor: not-allowed;
+      }
+    }
+
+    .fullscreen-btn {
+      &:hover:not(:disabled) {
+        border-color: #06b6d4;
+        color: #06b6d4;
+        box-shadow: 0 0 12px rgba(6,182,212,0.3);
       }
     }
 
@@ -399,9 +436,9 @@ interface Slide {
       transition: all 200ms;
 
       &.active {
-        background: #6366f1;
+        background: #f59e0b;
         transform: scale(1.35);
-        box-shadow: 0 0 10px rgba(99,102,241,0.6);
+        box-shadow: 0 0 10px rgba(245,158,11,0.7);
       }
 
       &:hover:not(.active) {
@@ -423,6 +460,69 @@ interface Slide {
       overflow: hidden;
     }
 
+    /* ENERGY BACKGROUND */
+    .energy-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.09;
+      animation: orbFloat 12s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 500px; height: 500px;
+      top: -150px; left: -100px;
+      background: radial-gradient(circle, #f59e0b, transparent 70%);
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 400px; height: 400px;
+      bottom: -120px; right: -80px;
+      background: radial-gradient(circle, #06b6d4, transparent 70%);
+      animation-delay: -4s;
+    }
+
+    .orb-3 {
+      width: 360px; height: 360px;
+      top: 40%; left: 45%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, #f97316, transparent 70%);
+      animation-delay: -8s;
+      opacity: 0.06;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: scale(1) translate(0, 0); }
+      33%       { transform: scale(1.08) translate(20px, -15px); }
+      66%       { transform: scale(0.95) translate(-10px, 20px); }
+    }
+
+    .orb-3 { animation-name: orbFloatCenter; }
+
+    @keyframes orbFloatCenter {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50%       { transform: translate(-50%, -50%) scale(1.15); }
+    }
+
+    .energy-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(245,158,11,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
     .slide {
       position: absolute;
       inset: 0;
@@ -434,6 +534,7 @@ interface Slide {
       transform: translateX(60px);
       transition: opacity 400ms ease, transform 400ms ease;
       pointer-events: none;
+      z-index: 1;
 
       &.active {
         opacity: 1;
@@ -464,12 +565,14 @@ interface Slide {
 
     /* COMMON ELEMENTS */
     .badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       padding: 6px 18px;
       border-radius: 999px;
-      background: rgba(99,102,241,0.12);
-      border: 1px solid rgba(99,102,241,0.3);
-      color: #a5b4fc;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.35);
+      color: #fbbf24;
       font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.06em;
@@ -487,7 +590,7 @@ interface Slide {
     }
 
     .gradient-text {
-      background: linear-gradient(135deg, #6366f1 0%, #06b6d4 60%, #22c55e 100%);
+      background: linear-gradient(135deg, #f59e0b 0%, #f97316 45%, #06b6d4 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -497,18 +600,20 @@ interface Slide {
       width: 72px;
       height: 4px;
       border-radius: 4px;
-      background: linear-gradient(90deg, #6366f1, #06b6d4);
+      background: linear-gradient(90deg, #f59e0b, #f97316, #06b6d4);
       margin: 0 auto 32px;
+      box-shadow: 0 0 12px rgba(245,158,11,0.5);
     }
 
     /* SLIDE 1 */
     .problem-block {
       background: var(--color-surface);
-      border: 1px solid var(--color-border);
+      border: 1px solid rgba(245,158,11,0.2);
       border-radius: 20px;
       padding: 36px 48px;
       max-width: 820px;
       text-align: left;
+      box-shadow: 0 0 40px rgba(245,158,11,0.06);
     }
 
     .problem-title {
@@ -526,7 +631,7 @@ interface Slide {
       margin-bottom: 24px;
       text-align: center;
 
-      strong { color: var(--color-text); }
+      strong { color: #fbbf24; }
     }
 
     .problem-bullets {
@@ -543,7 +648,7 @@ interface Slide {
       color: var(--color-text-muted);
       line-height: 1.5;
 
-      em { color: var(--color-text); font-style: normal; font-weight: 600; }
+      em { color: #fbbf24; font-style: normal; font-weight: 600; }
     }
 
     .bullet-icon {
@@ -567,12 +672,13 @@ interface Slide {
       border-radius: 18px;
       padding: 28px;
       text-align: left;
-      transition: border-color 200ms, transform 200ms;
+      transition: border-color 200ms, transform 200ms, box-shadow 200ms;
       position: relative;
 
       &:hover {
-        border-color: rgba(99,102,241,0.4);
+        border-color: rgba(245,158,11,0.4);
         transform: translateY(-3px);
+        box-shadow: 0 8px 32px rgba(245,158,11,0.1);
       }
 
       h3 {
@@ -589,17 +695,17 @@ interface Slide {
       }
 
       &.ai-card {
-        border-color: rgba(99,102,241,0.5);
-        background: linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(6,182,212,0.07) 100%);
-        box-shadow: 0 0 32px rgba(99,102,241,0.15), inset 0 0 24px rgba(99,102,241,0.04);
+        border-color: rgba(6,182,212,0.4);
+        background: linear-gradient(135deg, rgba(6,182,212,0.07) 0%, rgba(99,102,241,0.05) 100%);
+        box-shadow: 0 0 32px rgba(6,182,212,0.12);
 
         &:hover {
-          border-color: rgba(99,102,241,0.8);
-          box-shadow: 0 0 48px rgba(99,102,241,0.25), inset 0 0 24px rgba(99,102,241,0.06);
+          border-color: rgba(6,182,212,0.7);
+          box-shadow: 0 0 48px rgba(6,182,212,0.22);
           transform: translateY(-4px);
         }
 
-        h3 { color: #a5b4fc; }
+        h3 { color: #67e8f9; }
       }
     }
 
@@ -622,11 +728,11 @@ interface Slide {
       gap: 4px;
       padding: 3px 10px;
       border-radius: 999px;
-      background: rgba(99,102,241,0.15);
-      border: 1px solid rgba(99,102,241,0.4);
+      background: rgba(6,182,212,0.12);
+      border: 1px solid rgba(6,182,212,0.4);
       font-size: 11px;
       font-weight: 700;
-      color: #a5b4fc;
+      color: #67e8f9;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -649,15 +755,19 @@ interface Slide {
       transition: border-color 200ms, transform 200ms, box-shadow 200ms;
       position: relative;
 
-      &:hover { border-color: rgba(99,102,241,0.4); transform: translateY(-2px); }
+      &:hover {
+        border-color: rgba(245,158,11,0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(245,158,11,0.08);
+      }
 
       &.ai-cap {
-        border-color: rgba(99,102,241,0.35);
-        background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(6,182,212,0.04) 100%);
+        border-color: rgba(6,182,212,0.3);
+        background: linear-gradient(135deg, rgba(6,182,212,0.05) 0%, rgba(99,102,241,0.03) 100%);
 
         &:hover {
-          border-color: rgba(99,102,241,0.65);
-          box-shadow: 0 0 24px rgba(99,102,241,0.15);
+          border-color: rgba(6,182,212,0.6);
+          box-shadow: 0 6px 24px rgba(6,182,212,0.12);
         }
       }
 
@@ -694,11 +804,11 @@ interface Slide {
       gap: 3px;
       padding: 2px 8px;
       border-radius: 999px;
-      background: rgba(99,102,241,0.15);
-      border: 1px solid rgba(99,102,241,0.35);
+      background: rgba(6,182,212,0.12);
+      border: 1px solid rgba(6,182,212,0.35);
       font-size: 10px;
       font-weight: 700;
-      color: #a5b4fc;
+      color: #67e8f9;
       letter-spacing: 0.05em;
       flex-shrink: 0;
     }
@@ -708,10 +818,11 @@ interface Slide {
       width: 100%;
       max-width: 940px;
       background: var(--color-surface);
-      border: 1px solid var(--color-border);
+      border: 1px solid rgba(245,158,11,0.2);
       border-radius: 16px;
       padding: 16px;
       margin-top: 8px;
+      box-shadow: 0 0 40px rgba(245,158,11,0.06);
     }
 
     /* SVG diagram theme-aware classes */
@@ -767,7 +878,7 @@ interface Slide {
     .pulse-ring {
       position: absolute;
       border-radius: 50%;
-      border: 2px solid #6366f1;
+      border: 2px solid #f59e0b;
       animation: pulseRing 2s ease-out infinite;
 
       &.ring-1 { width: 100%; height: 100%; animation-delay: 0s; }
@@ -776,14 +887,13 @@ interface Slide {
     }
 
     @keyframes pulseRing {
-      0%   { transform: scale(0.8); opacity: 0.8; }
+      0%   { transform: scale(0.8); opacity: 0.9; }
       100% { transform: scale(1.6); opacity: 0; }
     }
 
     .demo-icon {
       font-size: 40px;
-      color: #6366f1;
-      filter: drop-shadow(0 0 14px rgba(99,102,241,0.8));
+      filter: drop-shadow(0 0 16px rgba(245,158,11,0.9));
       z-index: 1;
     }
 
@@ -811,9 +921,16 @@ interface Slide {
       padding: 10px 20px;
       border-radius: 999px;
       background: var(--color-surface);
-      border: 1px solid var(--color-border);
+      border: 1px solid rgba(245,158,11,0.25);
       font-size: 15px;
       color: var(--color-text-muted);
+      transition: all 200ms;
+
+      &:hover {
+        border-color: #f59e0b;
+        color: #fbbf24;
+        box-shadow: 0 0 16px rgba(245,158,11,0.2);
+      }
     }
 
     .team-members {
@@ -826,10 +943,11 @@ interface Slide {
       padding: 10px 28px;
       border-radius: 999px;
       background: var(--color-surface);
-      border: 1px solid var(--color-border);
+      border: 1px solid rgba(245,158,11,0.3);
       font-size: 18px;
       font-weight: 600;
       color: var(--color-text);
+      box-shadow: 0 0 16px rgba(245,158,11,0.1);
     }
 
     /* SLIDE 6 */
@@ -847,7 +965,7 @@ interface Slide {
     .team-name {
       font-size: clamp(34px, 5vw, 60px);
       font-weight: 900;
-      background: linear-gradient(135deg, #f97316, #ef4444, #a855f7);
+      background: linear-gradient(135deg, #f59e0b, #f97316, #ef4444, #a855f7);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -863,13 +981,13 @@ interface Slide {
       border-radius: 24px;
       overflow: hidden;
       cursor: pointer;
-      box-shadow: 0 0 48px rgba(99,102,241,0.25), 0 8px 40px rgba(0,0,0,0.4);
-      border: 2px solid var(--color-border);
-      transition: border-color 300ms;
+      box-shadow: 0 0 48px rgba(245,158,11,0.2), 0 8px 40px rgba(0,0,0,0.4);
+      border: 2px solid rgba(245,158,11,0.25);
+      transition: border-color 300ms, box-shadow 300ms;
 
       &:hover {
-        border-color: #6366f1;
-        box-shadow: 0 0 72px rgba(99,102,241,0.4), 0 8px 40px rgba(0,0,0,0.5);
+        border-color: #f59e0b;
+        box-shadow: 0 0 72px rgba(245,158,11,0.35), 0 8px 40px rgba(0,0,0,0.5);
       }
     }
 
@@ -934,6 +1052,20 @@ export class PresentationComponent {
 
   current = signal(0);
   showMonkeys = false;
+  isFullscreen = signal(false);
+
+  toggleFullscreen(): void {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.isFullscreen.set(!!document.fullscreenElement);
+  }
 
   next(): void {
     if (this.current() < this.slides.length - 1) {
@@ -957,6 +1089,10 @@ export class PresentationComponent {
       this.next();
     } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
       this.prev();
+    } else if (event.key === 'f' || event.key === 'F') {
+      this.toggleFullscreen();
+    } else if (event.key === 'Escape' && this.isFullscreen()) {
+      document.exitFullscreen();
     }
   }
 }
