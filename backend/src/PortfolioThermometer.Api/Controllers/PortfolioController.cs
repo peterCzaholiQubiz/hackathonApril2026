@@ -23,20 +23,26 @@ public sealed class PortfolioController(AppDbContext db) : ControllerBase
         var activeCustomerCount = await db.Customers
             .CountAsync(customer => customer.IsActive, ct);
 
-        var latestActiveScores = await db.RiskScores
+        var latestActiveRiskScoreIds = await db.RiskScores
             .Where(r => r.Customer.IsActive)
             .GroupBy(r => r.CustomerId)
             .Select(group => group
                 .OrderByDescending(score => score.ScoredAt)
                 .ThenByDescending(score => score.Id)
-                .Select(score => new
-                {
-                    score.ChurnScore,
-                    score.PaymentScore,
-                    score.MarginScore,
-                    score.HeatLevel
-                })
+                .Select(score => score.Id)
                 .First())
+            .ToListAsync(ct);
+
+        var latestActiveScores = await db.RiskScores
+            .Where(r => latestActiveRiskScoreIds.Contains(r.Id))
+            .Select(r => new
+            {
+                r.ChurnScore,
+                r.PaymentScore,
+                r.MarginScore,
+                r.HeatLevel,
+                CustomerSegment = r.Customer.Segment
+            })
             .ToListAsync(ct);
 
         decimal avgChurn = latestActiveScores.Count > 0
@@ -57,12 +63,28 @@ public sealed class PortfolioController(AppDbContext db) : ControllerBase
         decimal yellowPct = scoredTotal > 0 ? Math.Round((decimal)yellowCount / scoredTotal * 100, 2) : 0m;
         decimal redPct    = scoredTotal > 0 ? Math.Round((decimal)redCount    / scoredTotal * 100, 2) : 0m;
 
+        var breakdown = latestActiveScores
+            .Where(s => s.CustomerSegment != null)
+            .GroupBy(s => s.CustomerSegment!)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    green  = g.Count(s => s.HeatLevel == "green"),
+                    yellow = g.Count(s => s.HeatLevel == "yellow"),
+                    red    = g.Count(s => s.HeatLevel == "red")
+                });
+
+        var segmentBreakdownJson = breakdown.Count > 0
+            ? System.Text.Json.JsonSerializer.Serialize(breakdown)
+            : null;
+
         return Ok(ApiResponse<PortfolioSnapshotVm>.Ok(new PortfolioSnapshotVm(
             snapshot.Id, snapshot.CreatedAt, activeCustomerCount,
             greenCount, yellowCount, redCount,
             greenPct, yellowPct, redPct,
             avgChurn, avgPayment, avgMargin,
-            snapshot.SegmentBreakdown)));
+            segmentBreakdownJson)));
     }
 
     [HttpGet("history")]
