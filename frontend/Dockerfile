@@ -1,13 +1,22 @@
-FROM node:20-alpine
+# Build stage
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm ci
 
 COPY . .
+RUN npx ng build --configuration production
 
-EXPOSE 4200
+# Serve stage
+FROM nginx:alpine
 
-CMD ["npx", "ng", "serve", "--configuration", "production", "--host", "0.0.0.0", "--poll", "500"]
+COPY --from=builder /app/dist/portfolio-thermometer/browser /usr/share/nginx/html
+
+# Support Angular client-side routing
+RUN printf 'server {\n  listen 80;\n  root /usr/share/nginx/html;\n  index index.html;\n  location / {\n    try_files $uri $uri/ /index.html;\n  }\n}\n' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
