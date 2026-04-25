@@ -11,7 +11,8 @@ public sealed record CustomerSummaryVm(
     string? AccountManager,
     DateOnly? OnboardingDate,
     bool IsActive,
-    RiskScoreSummaryVm? LatestRisk);
+    RiskScoreSummaryVm? LatestRisk,
+    IReadOnlyList<string> EnergyTypes);
 
 public sealed record RiskScoreSummaryVm(
     int ChurnScore,

@@ -13,6 +13,7 @@ export interface Customer {
   isActive: boolean;
   importedAt: string;
   updatedAt: string;
+  energyTypes?: string[];
   latestRisk?: RiskScoreSummary | null;
   riskScores?: RiskScore[];
 }

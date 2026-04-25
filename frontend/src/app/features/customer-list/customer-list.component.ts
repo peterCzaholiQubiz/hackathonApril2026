@@ -42,6 +42,7 @@ import { CustomerFiltersComponent } from './customer-filters/customer-filters.co
                 <th>Name</th>
                 <th>Company</th>
                 <th>Segment</th>
+                <th>Energy</th>
                 <th>Churn</th>
                 <th>Payment</th>
                 <th>Margin</th>
@@ -50,7 +51,7 @@ import { CustomerFiltersComponent } from './customer-filters/customer-filters.co
             </thead>
             <tbody>
               @if (customers.length === 0) {
-                <tr><td colspan="8" class="ctable__empty">No customers match the current filters.</td></tr>
+                <tr><td colspan="9" class="ctable__empty">No customers match the current filters.</td></tr>
               }
               @for (c of customers; track c.id) {
                 <tr class="ctable__row" [routerLink]="['/customers', c.id]">
@@ -58,6 +59,11 @@ import { CustomerFiltersComponent } from './customer-filters/customer-filters.co
                   <td class="ctable__name">{{ c.name }}</td>
                   <td class="ctable__muted">{{ c.companyName ?? '—' }}</td>
                   <td class="ctable__muted">{{ c.segment ?? '—' }}</td>
+                  <td class="ctable__energy">
+                    @for (part of energyParts(c); track part.label) {
+                      <span class="energy-badge energy-badge--{{ part.type }}" [title]="part.label">{{ part.icon }}</span>
+                    }
+                  </td>
                   <td><app-score-bar [score]="latestScore(c, 'churn')" /></td>
                   <td><app-score-bar [score]="latestScore(c, 'payment')" /></td>
                   <td><app-score-bar [score]="latestScore(c, 'margin')" /></td>
@@ -133,7 +139,26 @@ import { CustomerFiltersComponent } from './customer-filters/customer-filters.co
 
       &__name { font-weight: 600; min-width: 140px; }
       &__muted { color: var(--color-text-muted); }
+      &__energy { white-space: nowrap; }
       &__empty { padding: 32px 0; text-align: center; color: var(--color-text-muted); }
+    }
+
+    .energy-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1;
+
+      & + & { margin-left: 4px; }
+
+      &--elec-consumption { background: rgba(239, 68, 68, 0.18); }
+      &--elec-production  { background: rgba(34, 197, 94, 0.18); }
+      &--gas              { background: rgba(245, 158, 11, 0.18); }
+      &--none             { color: var(--color-text-muted); background: transparent; }
     }
 
     .pagination {
@@ -205,6 +230,19 @@ export class CustomerListComponent implements OnInit {
 
   latestHeat(c: Customer) {
     return c.latestRisk?.heatLevel ?? 'green';
+  }
+
+  energyParts(c: Customer): { icon: string; type: string; label: string }[] {
+    const types = c.energyTypes ?? [];
+    const parts: { icon: string; type: string; label: string }[] = [];
+    const hasElecConsumption = types.some(t => /electricity:consumption/i.test(t) || t.toLowerCase() === 'electricity');
+    const hasElecProduction  = types.some(t => /electricity:production/i.test(t));
+    const hasGas             = types.some(t => /^gas/i.test(t));
+    if (hasElecConsumption) parts.push({ icon: '⚡', type: 'elec-consumption', label: 'Electricity (Consumption)' });
+    if (hasElecProduction)  parts.push({ icon: '⚡', type: 'elec-production',  label: 'Electricity (Production / Solar)' });
+    if (hasGas)             parts.push({ icon: '🔥', type: 'gas',              label: 'Gas' });
+    if (parts.length === 0) parts.push({ icon: '—',  type: 'none',             label: 'No connections' });
+    return parts;
   }
 
   latestScore(c: Customer, dim: 'churn' | 'payment' | 'margin' | 'overall'): number {

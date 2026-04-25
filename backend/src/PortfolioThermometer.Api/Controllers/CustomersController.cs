@@ -69,16 +69,53 @@ public sealed class CustomersController(
             .Take(pageSize)
             .ToListAsync(ct);
 
+        var customerIds = customers.Select(c => c.Id).ToList();
+
+        // Derive energy types from meter reads: "Electricity:Consumption", "Electricity:Production", "Gas:..."
+        // Fetch flat rows first, then group in memory — EF Core cannot translate Distinct() inside GroupBy.Select.
+        var meterEnergyRaw = await db.MeterReads
+            .AsNoTracking()
+            .Where(mr => mr.ConnectionId.HasValue && mr.Direction != null)
+            .Join(
+                db.Connections.Where(c => c.CustomerId.HasValue && customerIds.Contains(c.CustomerId.Value) && c.ProductType != null),
+                mr => mr.ConnectionId,
+                c => c.Id,
+                (mr, c) => new { CustomerId = c.CustomerId!.Value, Tag = c.ProductType! + ":" + mr.Direction! })
+            .Distinct()
+            .ToListAsync(ct);
+
+        var meterEnergyMap = meterEnergyRaw
+            .GroupBy(x => x.CustomerId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Tag).Distinct().ToList());
+
+        // Fallback for customers that have connections but no meter reads yet
+        var connEnergyRaw = await db.Connections
+            .AsNoTracking()
+            .Where(c => c.CustomerId.HasValue && customerIds.Contains(c.CustomerId.Value) && c.ProductType != null)
+            .Select(c => new { CustomerId = c.CustomerId!.Value, ProductType = c.ProductType! })
+            .ToListAsync(ct);
+
+        var connEnergyMap = connEnergyRaw
+            .GroupBy(x => x.CustomerId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ProductType).Distinct().ToList());
+
         var vms = customers.Select(c =>
         {
             var latest = c.RiskScores.MaxBy(r => r.ScoredAt);
             var risk = latest is null ? null : new RiskScoreSummaryVm(
                 latest.ChurnScore, latest.PaymentScore, latest.MarginScore,
                 latest.OverallScore, latest.HeatLevel, latest.ScoredAt);
+            IReadOnlyList<string> energyTypes;
+            if (meterEnergyMap.TryGetValue(c.Id, out var mrTags) && mrTags.Count > 0)
+                energyTypes = mrTags.OrderBy(t => t).ToList();
+            else if (connEnergyMap.TryGetValue(c.Id, out var connTypes))
+                energyTypes = connTypes.OrderBy(t => t).ToList();
+            else
+                energyTypes = [];
             return new CustomerSummaryVm(
                 c.Id, c.CrmExternalId, c.Name, c.CompanyName,
                 c.Email, c.Phone, c.Segment, c.AccountManager,
-                c.OnboardingDate, c.IsActive, risk);
+                c.OnboardingDate, c.IsActive, risk, energyTypes);
         }).ToList();
 
         var meta = new ApiMeta { Total = total, Page = page, PageSize = pageSize };
