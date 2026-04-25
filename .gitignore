@@ -460,3 +460,11 @@ backend/artifacts/validate-api/zh-Hant/Microsoft.CodeAnalysis.CSharp.Workspaces.
 backend/artifacts/validate-api/zh-Hant/Microsoft.CodeAnalysis.resources.dll
 backend/artifacts/validate-api/zh-Hant/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 backend/artifacts/validate-api/zh-Hant/Microsoft.CodeAnalysis.Workspaces.resources.dll
+backend/artifacts/copilot-obj/PortfolioThermometer.Api.csproj.nuget.dgspec.json
+backend/artifacts/copilot-obj/PortfolioThermometer.Api.csproj.nuget.g.props
+backend/artifacts/copilot-obj/PortfolioThermometer.Api.csproj.nuget.g.targets
+backend/artifacts/copilot-obj/PortfolioThermometer.Infrastructure.csproj.nuget.dgspec.json
+backend/artifacts/copilot-obj/PortfolioThermometer.Infrastructure.csproj.nuget.g.props
+backend/artifacts/copilot-obj/PortfolioThermometer.Infrastructure.csproj.nuget.g.targets
+backend/artifacts/copilot-obj/project.assets.json
+backend/artifacts/copilot-test-log.txt

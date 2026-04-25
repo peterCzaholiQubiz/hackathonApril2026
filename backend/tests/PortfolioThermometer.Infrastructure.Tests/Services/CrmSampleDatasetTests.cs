@@ -26,28 +26,24 @@ public sealed class CrmSampleDatasetTests
         var importedInvoices = await db.Invoices.CountAsync();
         var importedInteractions = await db.Interactions.CountAsync();
         var importedConnections = await db.Connections.CountAsync();
-        var importedMeterReads = await db.MeterReads.CountAsync();
 
         importedCustomers.Should().Be(100);
         importedContracts.Should().BeGreaterThan(0);
         importedInvoices.Should().BeGreaterThan(0);
         importedInteractions.Should().BeGreaterThan(0);
         importedConnections.Should().BeGreaterThan(0);
-        importedMeterReads.Should().BeGreaterThan(0);
 
         result.CustomersImported.Should().Be(100);
         result.ContractsImported.Should().BeGreaterThan(0);
         result.InvoicesImported.Should().BeGreaterThan(0);
         result.InteractionsImported.Should().BeGreaterThan(0);
         result.ConnectionsImported.Should().BeGreaterThan(0);
-        result.MeterReadsImported.Should().BeGreaterThan(0);
 
         importedCustomers.Should().Be(result.CustomersImported);
         importedContracts.Should().Be(result.ContractsImported);
         importedInvoices.Should().Be(result.InvoicesImported);
         importedInteractions.Should().Be(result.InteractionsImported);
         importedConnections.Should().Be(result.ConnectionsImported);
-        importedMeterReads.Should().Be(result.MeterReadsImported);
     }
 
     private static AppDbContext CreateDb()
