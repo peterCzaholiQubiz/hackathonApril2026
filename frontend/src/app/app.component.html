@@ -5,6 +5,17 @@
       <span class="sidebar__logo-text">Portfolio<br>Thermometer</span>
     </div>
 
+    <div class="sidebar__header-actions">
+      <button
+        class="theme-toggle"
+        (click)="themeService.toggle()"
+        [title]="themeService.isLight() ? 'Switch to dark mode' : 'Switch to light mode'"
+      >
+        <span class="sidebar__link-icon">{{ themeService.isLight() ? '🌙' : '☀️' }}</span>
+        {{ themeService.isLight() ? 'Dark mode' : 'Light mode' }}
+      </button>
+    </div>
+
     <ul class="sidebar__nav">
       <li>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="sidebar__link">
@@ -30,7 +41,14 @@
           Meter Reads
         </a>
       </li>
+      <li>
+        <a routerLink="/test-data" routerLinkActive="active" class="sidebar__link">
+          <span class="sidebar__link-icon">&#x1F9EA;</span>
+          Test Data
+        </a>
+      </li>
     </ul>
+
   </nav>
 
   <main class="main-content">

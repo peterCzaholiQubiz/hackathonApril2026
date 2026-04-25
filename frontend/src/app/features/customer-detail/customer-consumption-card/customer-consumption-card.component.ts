@@ -19,11 +19,35 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
       <header class="consumption-card__header">
         <div>
           <p class="consumption-card__eyebrow">Consumption</p>
-          <h2 class="consumption-card__title">Monthly meter reads</h2>
+          <h2 class="consumption-card__title">Meter Reads</h2>
         </div>
-        @if (selectedUnit) {
-          <span class="consumption-card__unit">Unit: {{ selectedUnit }}</span>
-        }
+        <div class="consumption-card__header-right">
+          <div class="energy-toggle">
+            <button
+              class="energy-toggle__btn"
+              [class.energy-toggle__btn--active]="energyType === 'electricity'"
+              (click)="setEnergyType('electricity')"
+              title="Electricity (kWh)"
+            >
+              <span class="energy-toggle__icon">⚡</span>
+              <span class="energy-toggle__label">Electricity</span>
+              <span class="energy-toggle__unit">kWh</span>
+            </button>
+            <button
+              class="energy-toggle__btn"
+              [class.energy-toggle__btn--active]="energyType === 'gas'"
+              (click)="setEnergyType('gas')"
+              title="Gas (co3)"
+            >
+              <span class="energy-toggle__icon">🔥</span>
+              <span class="energy-toggle__label">Gas</span>
+              <span class="energy-toggle__unit">co3</span>
+            </button>
+          </div>
+          @if (selectedUnit) {
+            <span class="consumption-card__unit">Unit: {{ displayUnit }}</span>
+          }
+        </div>
       </header>
 
       <div class="consumption-card__controls">
@@ -75,7 +99,7 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
         <div class="consumption-card__summary">
           <div class="summary-stat">
             <span class="summary-stat__label">Total consumption</span>
-            <span class="summary-stat__value">{{ totalConsumption | number:'1.0-2' }} {{ selectedUnitLabel }}</span>
+            <span class="summary-stat__value">{{ totalConsumptionConverted | number:'1.0-2' }} {{ displayUnit }}</span>
           </div>
           <div class="summary-stat">
             <span class="summary-stat__label">Points</span>
@@ -109,7 +133,22 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
       align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
     }
+
+    .consumption-card__header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .energy-toggle { display: flex; background: var(--color-surface-2, #f3f4f6); border: 1px solid var(--color-border, #e5e7eb); border-radius: .625rem; padding: 3px; gap: 3px; }
+    .energy-toggle__btn { display: flex; align-items: center; gap: .375rem; padding: .5rem .875rem; border: none; border-radius: .4rem; background: transparent; cursor: pointer; font-size: .8rem; font-weight: 500; color: var(--color-text-muted, #6b7280); transition: background 150ms, color 150ms, box-shadow 150ms; white-space: nowrap; }
+    .energy-toggle__btn--active { background: var(--color-surface, #fff); color: var(--color-text, #111); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .energy-toggle__icon { font-size: 1rem; }
+    .energy-toggle__label { font-weight: 600; }
+    .energy-toggle__unit { font-size: .7rem; opacity: .7; font-weight: 400; }
 
     .consumption-card__eyebrow {
       margin: 0 0 4px;
@@ -292,6 +331,16 @@ export class CustomerConsumptionCardComponent implements OnChanges {
   error: string | null = null;
   points: CustomerConsumptionPoint[] = [];
 
+  energyType: 'electricity' | 'gas' = 'electricity';
+
+  private get conversionFactor(): number {
+    return this.energyType === 'electricity' ? 1 : 0.0972;
+  }
+
+  get displayUnit(): string {
+    return this.energyType === 'electricity' ? this.selectedUnit : 'co3';
+  }
+
   chartData: ChartData<'line'> = { labels: [], datasets: [] };
   chartOptions: ChartOptions<'line'> = this.createChartOptions('');
 
@@ -305,6 +354,17 @@ export class CustomerConsumptionCardComponent implements OnChanges {
 
   get totalConsumption(): number {
     return this.points.reduce((total, point) => total + point.consumption, 0);
+  }
+
+  get totalConsumptionConverted(): number {
+    return this.totalConsumption * this.conversionFactor;
+  }
+
+  setEnergyType(type: 'electricity' | 'gas'): void {
+    this.energyType = type;
+    if (this.points.length > 0) {
+      this.buildChart(this.points);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -382,17 +442,20 @@ export class CustomerConsumptionCardComponent implements OnChanges {
   }
 
   private buildChart(points: CustomerConsumptionPoint[]): void {
+    const cf = this.conversionFactor;
+    const isGas = this.energyType === 'gas';
+
     this.chartData = {
       labels: points.map((point) => this.formatMonth(point.month)),
       datasets: [
         {
-          label: 'Consumption',
-          data: points.map((point) => point.consumption),
-          borderColor: '#0f766e',
-          backgroundColor: 'rgba(15, 118, 110, 0.16)',
-          pointBackgroundColor: '#115e59',
+          label: `Consumption (${this.displayUnit})`,
+          data: points.map((point) => point.consumption * cf),
+          borderColor: isGas ? '#f97316' : '#0f766e',
+          backgroundColor: isGas ? 'rgba(249, 115, 22, 0.16)' : 'rgba(15, 118, 110, 0.16)',
+          pointBackgroundColor: isGas ? '#ea580c' : '#115e59',
           pointBorderColor: '#ffffff',
-          pointHoverBackgroundColor: '#0f766e',
+          pointHoverBackgroundColor: isGas ? '#f97316' : '#0f766e',
           pointHoverBorderColor: '#ffffff',
           pointRadius: 4,
           pointHoverRadius: 6,
@@ -403,7 +466,7 @@ export class CustomerConsumptionCardComponent implements OnChanges {
       ],
     };
 
-    this.chartOptions = this.createChartOptions(this.selectedUnitLabel);
+    this.chartOptions = this.createChartOptions(this.displayUnit);
   }
 
   private createChartOptions(unitLabel: string): ChartOptions<'line'> {
@@ -446,18 +509,21 @@ export class CustomerConsumptionCardComponent implements OnChanges {
     const point = this.points[item.dataIndex];
     if (!point) return '';
 
-    return `Consumption: ${point.consumption.toFixed(2)} ${point.unit}`;
+    const value = point.consumption * this.conversionFactor;
+    return `Consumption: ${value.toFixed(2)} ${this.displayUnit}`;
   }
 
   private buildTooltipAfterBody(items: TooltipItem<'line'>[]): string[] {
     const point = this.points[items[0]?.dataIndex ?? -1];
     if (!point) return [];
 
+    const cf = this.conversionFactor;
+    const unit = this.displayUnit;
     const lines = [`Quality: ${point.quality}`];
     if (point.quality === 'Mixed') {
       lines.push(
         ...point.qualityBreakdown.map((entry) =>
-          `${entry.quality}: ${entry.consumption.toFixed(2)} ${point.unit} (${entry.readCount} reads)`
+          `${entry.quality}: ${(entry.consumption * cf).toFixed(2)} ${unit} (${entry.readCount} reads)`
         )
       );
     }

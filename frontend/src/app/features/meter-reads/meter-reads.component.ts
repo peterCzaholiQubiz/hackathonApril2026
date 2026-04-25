@@ -28,8 +28,34 @@ Chart.register(...registerables);
   template: `
     <div class="meter-reads">
       <header class="meter-reads__header">
-        <h1 class="meter-reads__title">Meter Read Simulator</h1>
-        <p class="meter-reads__subtitle">Generate hourly consumption data for a customer connection profile</p>
+        <div class="meter-reads__header-top">
+          <div>
+            <h1 class="meter-reads__title">Meter Reads</h1>
+            <p class="meter-reads__subtitle">Generate hourly consumption data for a customer connection profile</p>
+          </div>
+          <div class="energy-toggle">
+            <button
+              class="energy-toggle__btn"
+              [class.energy-toggle__btn--active]="energyType === 'electricity'"
+              (click)="setEnergyType('electricity')"
+              title="Electricity (kWh)"
+            >
+              <span class="energy-toggle__icon">⚡</span>
+              <span class="energy-toggle__label">Electricity</span>
+              <span class="energy-toggle__unit">kWh</span>
+            </button>
+            <button
+              class="energy-toggle__btn"
+              [class.energy-toggle__btn--active]="energyType === 'gas'"
+              (click)="setEnergyType('gas')"
+              title="Gas (co3)"
+            >
+              <span class="energy-toggle__icon">🔥</span>
+              <span class="energy-toggle__label">Gas</span>
+              <span class="energy-toggle__unit">co3</span>
+            </button>
+          </div>
+        </div>
       </header>
 
       <div class="card meter-reads__controls">
@@ -96,12 +122,12 @@ Chart.register(...registerables);
 
         <div class="meter-reads__summary">
           <div class="stat-card">
-            <span class="stat-card__label">Total kWh</span>
-            <span class="stat-card__value">{{ totalConsumption | number:'1.0-0' }}</span>
+            <span class="stat-card__label">Total {{ unit }}</span>
+            <span class="stat-card__value">{{ convert(totalConsumptionRaw) | number:'1.0-0' }}</span>
           </div>
           <div class="stat-card">
-            <span class="stat-card__label">Daily Avg</span>
-            <span class="stat-card__value">{{ dailyAvg | number:'1.1-1' }}</span>
+            <span class="stat-card__label">Daily Avg ({{ unit }})</span>
+            <span class="stat-card__value">{{ convert(dailyAvgRaw) | number:'1.1-1' }}</span>
           </div>
           <div class="stat-card">
             <span class="stat-card__label">Peak Share</span>
@@ -110,7 +136,7 @@ Chart.register(...registerables);
           @if (response.profile === 'SolarProducer') {
             <div class="stat-card">
               <span class="stat-card__label">Net Consumption</span>
-              <span class="stat-card__value">{{ netConsumption | number:'1.0-0' }} kWh</span>
+              <span class="stat-card__value">{{ convert(netConsumptionRaw) | number:'1.0-0' }} {{ unit }}</span>
             </div>
           }
         </div>
@@ -129,8 +155,15 @@ Chart.register(...registerables);
       gap: 1.5rem;
     }
     .meter-reads__header { display: flex; flex-direction: column; gap: .25rem; }
+    .meter-reads__header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .meter-reads__title { font-size: 1.5rem; font-weight: 700; margin: 0; }
     .meter-reads__subtitle { margin: 0; color: var(--color-text-muted, #6b7280); font-size: .875rem; }
+    .energy-toggle { display: flex; background: var(--color-surface-2, #f3f4f6); border: 1px solid var(--color-border, #e5e7eb); border-radius: .625rem; padding: 3px; gap: 3px; }
+    .energy-toggle__btn { display: flex; align-items: center; gap: .375rem; padding: .5rem .875rem; border: none; border-radius: .4rem; background: transparent; cursor: pointer; font-size: .8rem; font-weight: 500; color: var(--color-text-muted, #6b7280); transition: background 150ms, color 150ms, box-shadow 150ms; white-space: nowrap; }
+    .energy-toggle__btn--active { background: var(--color-surface, #fff); color: var(--color-text, #111); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .energy-toggle__icon { font-size: 1rem; }
+    .energy-toggle__label { font-weight: 600; }
+    .energy-toggle__unit { font-size: .7rem; opacity: .7; font-weight: 400; }
     .meter-reads__controls { padding: 1.25rem 1.5rem; }
     .controls-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
     .control-group { display: flex; flex-direction: column; gap: .375rem; min-width: 180px; }
@@ -161,6 +194,8 @@ export class MeterReadsComponent implements OnInit {
   selectedProfile: ConsumptionProfile = 'LowConsumer';
   selectedPeriod: GenerationPeriod = 'OneYear';
 
+  energyType: 'electricity' | 'gas' = 'electricity';
+
   generating = false;
   error: string | null = null;
   response: GenerateMeterReadsResponse | null = null;
@@ -178,29 +213,49 @@ export class MeterReadsComponent implements OnInit {
     },
   };
 
+  get unit(): string {
+    return this.energyType === 'electricity' ? 'kWh' : 'co3';
+  }
+
+  /** Conversion factor: 1 kWh ≈ 0.0972 m³ natural gas equivalent */
+  private get conversionFactor(): number {
+    return this.energyType === 'electricity' ? 1 : 0.0972;
+  }
+
+  convert(value: number): number {
+    return value * this.conversionFactor;
+  }
+
   get profileDescription(): string {
     return this.meterReadService.profileOptions.find(p => p.value === this.selectedProfile)?.description ?? '';
   }
 
-  get totalConsumption(): number {
+  get totalConsumptionRaw(): number {
     return this.response?.dailySummary.reduce((s, d) => s + d.totalConsumption, 0) ?? 0;
   }
 
-  get dailyAvg(): number {
+  get dailyAvgRaw(): number {
     const days = this.response?.dailySummary.length ?? 0;
-    return days > 0 ? this.totalConsumption / days : 0;
+    return days > 0 ? this.totalConsumptionRaw / days : 0;
   }
 
   get peakShare(): number {
     if (!this.response) return 0;
     const totalHigh = this.response.dailySummary.reduce((s, d) => s + d.consumptionHigh, 0);
-    return this.totalConsumption > 0 ? (totalHigh / this.totalConsumption) * 100 : 0;
+    return this.totalConsumptionRaw > 0 ? (totalHigh / this.totalConsumptionRaw) * 100 : 0;
   }
 
-  get netConsumption(): number {
+  get netConsumptionRaw(): number {
     if (!this.response) return 0;
     const totalProd = this.response.dailySummary.reduce((s, d) => s + d.production, 0);
-    return this.totalConsumption - totalProd;
+    return this.totalConsumptionRaw - totalProd;
+  }
+
+  setEnergyType(type: 'electricity' | 'gas'): void {
+    this.energyType = type;
+    if (this.response) {
+      this.buildChart(this.response.dailySummary);
+    }
   }
 
   ngOnInit(): void {
@@ -238,6 +293,7 @@ export class MeterReadsComponent implements OnInit {
   }
 
   private buildChart(days: DailyMeterReadSummary[]): void {
+    const cf = this.conversionFactor;
     const labels = days.map(d => {
       const date = new Date(d.date);
       return `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
@@ -245,27 +301,35 @@ export class MeterReadsComponent implements OnInit {
 
     const datasets: ChartData<'bar'>['datasets'] = [
       {
-        label: 'Peak (UsageHigh)',
-        data: days.map(d => d.consumptionHigh),
-        backgroundColor: '#3b82f6',
+        label: `Peak (${this.unit})`,
+        data: days.map(d => d.consumptionHigh * cf),
+        backgroundColor: this.energyType === 'electricity' ? '#3b82f6' : '#f97316',
         stack: 'consumption',
       },
       {
-        label: 'Off-Peak (UsageLow)',
-        data: days.map(d => d.consumptionLow),
-        backgroundColor: '#14b8a6',
+        label: `Off-Peak (${this.unit})`,
+        data: days.map(d => d.consumptionLow * cf),
+        backgroundColor: this.energyType === 'electricity' ? '#14b8a6' : '#fb923c',
         stack: 'consumption',
       },
     ];
 
     if (this.selectedProfile === 'SolarProducer') {
       datasets.push({
-        label: 'Production',
-        data: days.map(d => d.production),
+        label: `Production (${this.unit})`,
+        data: days.map(d => d.production * cf),
         backgroundColor: '#f59e0b',
         stack: 'production',
       });
     }
+
+    this.chartOptions = {
+      ...this.chartOptions,
+      scales: {
+        x: { stacked: true, ticks: { maxTicksLimit: 30, maxRotation: 45 } },
+        y: { stacked: true, title: { display: true, text: this.unit } },
+      },
+    };
 
     this.chartData = { labels, datasets };
   }

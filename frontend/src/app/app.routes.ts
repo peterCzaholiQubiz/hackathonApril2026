@@ -30,6 +30,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'test-data',
+    loadComponent: () =>
+      import('./features/test-data/test-data.component').then(
+        (m) => m.TestDataComponent
+      ),
+  },
+  {
     path: 'meter-reads',
     loadComponent: () =>
       import('./features/meter-reads/meter-reads.component').then(

@@ -22,6 +22,12 @@ public record GenerateMeterReadsRequest(
     GenerationPeriod Period
 );
 
+public record GenerateYearlyMeterReadsRequest(
+    IReadOnlyList<Guid> CustomerIds,
+    int Year,
+    int ProducerPercentage = 25
+);
+
 public record DailyMeterReadSummary(
     string Date,
     decimal ConsumptionHigh,
@@ -36,4 +42,22 @@ public record GenerateMeterReadsResponse(
     GenerationPeriod Period,
     int TotalHourlyRowsGenerated,
     IReadOnlyList<DailyMeterReadSummary> DailySummary
+);
+
+public record MeterReadGenerationSkippedCustomer(
+    Guid CustomerId,
+    string Reason
+);
+
+public record GenerateYearlyMeterReadsResponse(
+    int Year,
+    int RequestedCustomerCount,
+    int EligibleCustomerCount,
+    int ProducerCustomerCount,
+    int ProcessedConnectionCount,
+    int ConsumptionRowsGenerated,
+    int ProductionRowsGenerated,
+    int ReducedConsumptionHourCount,
+    IReadOnlyList<Guid> ProducerCustomerIds,
+    IReadOnlyList<MeterReadGenerationSkippedCustomer> SkippedCustomers
 );

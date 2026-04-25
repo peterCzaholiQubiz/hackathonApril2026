@@ -1,17 +1,22 @@
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 220px;
-  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   padding: 24px 0;
   flex-shrink: 0;
+  overflow-y: auto;
+  transition: background var(--duration-normal), border-color var(--duration-normal);
 
   &__logo {
     display: flex;
@@ -33,6 +38,12 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
+  }
+
+  &__header-actions {
+    padding: 0 12px 12px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 8px;
   }
 
   &__nav {
@@ -76,4 +87,26 @@
   flex: 1;
   padding: 32px;
   overflow-y: auto;
+  height: 100vh;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: background var(--duration-fast), color var(--duration-fast);
+
+  &:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
 }

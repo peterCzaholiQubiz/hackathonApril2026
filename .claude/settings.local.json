@@ -21,7 +21,8 @@
       "Bash(dotnet test:*)",
       "Bash(dotnet add:*)",
       "Bash(dotnet sln *)",
-      "Bash(npx ng *)"
+      "Bash(npx ng *)",
+      "Bash(find *)"
     ]
   }
 }
