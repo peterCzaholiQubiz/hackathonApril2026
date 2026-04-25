@@ -23,10 +23,11 @@ public sealed class TestDataController(
         CancellationToken ct)
     {
         var count = Math.Clamp(request.CustomerCount, 1, 500);
+        var atRiskCount = Math.Clamp(request.AtRiskCustomerCount, 0, 500);
 
-        logger.LogInformation("Generating test data for {Count} customers", count);
+        logger.LogInformation("Generating test data for {Count} customers, {AtRiskCount} at-risk", count, atRiskCount);
 
-        var result = await generationService.GenerateAsync(count, ct);
+        var result = await generationService.GenerateAsync(count, atRiskCount, ct);
 
         logger.LogInformation(
             "Test data created: {Customers} customers, {Connections} connections, {Reads} meter reads",
@@ -52,7 +53,7 @@ public sealed class TestDataController(
 
                 var scores = await scoringEngine.ScoreAllCustomersAsync(snapshot.Id, ct);
                 await aggregationService.RefreshSnapshotAsync(snapshot.Id, ct);
-                await explanationService.GenerateExplanationsAsync(scores, ct);
+                //await explanationService.GenerateExplanationsAsync(scores, ct);
 
                 snapshot.CreatedAt = DateTimeOffset.UtcNow;
                 await db.SaveChangesAsync(ct);
@@ -95,8 +96,34 @@ public sealed class TestDataController(
             request.RunPipeline)));
     }
 
+    [HttpPost("generate-activities")]
+    public async Task<ActionResult<ApiResponse<GenerateActivitiesResponse>>> GenerateActivities(
+        [FromBody] GenerateActivitiesRequest request,
+        CancellationToken ct)
+    {
+        if (request.CustomerIds is not { Count: > 0 })
+            return BadRequest(ApiResponse<GenerateActivitiesResponse>.Fail("At least one customer ID is required."));
+
+        logger.LogInformation("Generating activities for {Count} customers", request.CustomerIds.Count);
+
+        var result = await generationService.GenerateActivitiesAsync(request.CustomerIds, ct);
+
+        logger.LogInformation(
+            "Activities created: {Complaints} complaints, {Interactions} interactions",
+            result.ComplaintsCreated, result.InteractionsCreated);
+
+        return Ok(ApiResponse<GenerateActivitiesResponse>.Ok(new GenerateActivitiesResponse(
+            result.ComplaintsCreated,
+            result.InteractionsCreated)));
+    }
+
+    public sealed record GenerateActivitiesRequest(IReadOnlyList<Guid> CustomerIds);
+
+    public sealed record GenerateActivitiesResponse(int ComplaintsCreated, int InteractionsCreated);
+
     public sealed record GenerateTestDataRequest(
         int CustomerCount,
+        int AtRiskCustomerCount = 0,
         bool RunPipeline = true);
 
     public sealed record GenerateTestDataResponse(

@@ -1,5 +1,15 @@
+export interface GenerateActivitiesRequest {
+  customerIds: string[];
+}
+
+export interface GenerateActivitiesResponse {
+  complaintsCreated: number;
+  interactionsCreated: number;
+}
+
 export interface GenerateTestDataRequest {
   customerCount: number;
+  atRiskCustomerCount: number;
   runPipeline: boolean;
 }
 

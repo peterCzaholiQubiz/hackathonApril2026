@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Interaction, Complaint } from '../../../core/models/customer.model';
 
 type TimelineEntry =
@@ -21,7 +22,7 @@ const SENTIMENT_COLOR: Record<string, string> = {
 @Component({
   selector: 'app-customer-timeline',
   standalone: true,
-  imports: [],
+  imports: [DatePipe],
   template: `
     <div class="timeline">
       <h2 class="timeline__title">Activity Timeline</h2>

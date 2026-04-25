@@ -39,6 +39,12 @@ export class CustomerService {
     );
   }
 
+  getSegments(): Observable<ApiResponse<string[]>> {
+    return this.http.get<ApiResponse<string[]>>(
+      `${this.env.apiUrl}/api/customers/segments`
+    );
+  }
+
   getById(id: string): Observable<ApiResponse<CustomerDetail>> {
     return this.http.get<ApiResponse<CustomerDetail>>(
       `${this.env.apiUrl}/api/customers/${id}`

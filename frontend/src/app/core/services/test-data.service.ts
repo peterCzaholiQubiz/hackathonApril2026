@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { ENVIRONMENT } from '../tokens/environment.token';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  GenerateActivitiesRequest,
+  GenerateActivitiesResponse,
   GenerateTestDataRequest,
   GenerateTestDataResponse,
   GenerateYearlyMeterReadsRequest,
@@ -18,6 +20,13 @@ export class TestDataService {
   generatePortfolioData(request: GenerateTestDataRequest): Observable<ApiResponse<GenerateTestDataResponse>> {
     return this.http.post<ApiResponse<GenerateTestDataResponse>>(
       `${this.env.apiUrl}/api/test-data/generate`,
+      request
+    );
+  }
+
+  generateActivities(request: GenerateActivitiesRequest): Observable<ApiResponse<GenerateActivitiesResponse>> {
+    return this.http.post<ApiResponse<GenerateActivitiesResponse>>(
+      `${this.env.apiUrl}/api/test-data/generate-activities`,
       request
     );
   }
