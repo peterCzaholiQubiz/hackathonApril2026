@@ -177,6 +177,13 @@ testem.log
 .DS_Store
 Thumbs.db
 
+## Local generated artifacts ##
+test_output/
+test-output/
+test-artifacts/
+deploylogs/
+diff_output.txt
+
 ## Environment files ##
 .env
 .env.local

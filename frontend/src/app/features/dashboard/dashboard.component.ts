@@ -104,6 +104,14 @@ import { RiskTrendComponent } from './risk-trend/risk-trend.component';
       &__avg-scores {
         display: flex;
         gap: 24px;
+        align-items: center;
+      }
+
+      &__divider {
+        width: 1px;
+        height: 40px;
+        background: var(--color-border);
+        margin: 0 4px;
       }
 
       &__grid {

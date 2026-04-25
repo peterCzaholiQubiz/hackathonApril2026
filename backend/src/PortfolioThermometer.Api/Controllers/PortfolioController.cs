@@ -20,11 +20,48 @@ public sealed class PortfolioController(AppDbContext db) : ControllerBase
         if (snapshot is null)
             return Ok(ApiResponse<PortfolioSnapshotVm?>.Ok(null));
 
+        var activeCustomerCount = await db.Customers
+            .CountAsync(customer => customer.IsActive, ct);
+
+        var latestActiveScores = await db.RiskScores
+            .Where(r => r.Customer.IsActive)
+            .GroupBy(r => r.CustomerId)
+            .Select(group => group
+                .OrderByDescending(score => score.ScoredAt)
+                .ThenByDescending(score => score.Id)
+                .Select(score => new
+                {
+                    score.ChurnScore,
+                    score.PaymentScore,
+                    score.MarginScore,
+                    score.HeatLevel
+                })
+                .First())
+            .ToListAsync(ct);
+
+        decimal avgChurn = latestActiveScores.Count > 0
+            ? Math.Round((decimal)latestActiveScores.Average(s => s.ChurnScore), 2)
+            : 0m;
+        decimal avgPayment = latestActiveScores.Count > 0
+            ? Math.Round((decimal)latestActiveScores.Average(s => s.PaymentScore), 2)
+            : 0m;
+        decimal avgMargin = latestActiveScores.Count > 0
+            ? Math.Round((decimal)latestActiveScores.Average(s => s.MarginScore), 2)
+            : 0m;
+
+        int scoredTotal = latestActiveScores.Count;
+        int greenCount  = latestActiveScores.Count(s => s.HeatLevel == "green");
+        int yellowCount = latestActiveScores.Count(s => s.HeatLevel == "yellow");
+        int redCount    = latestActiveScores.Count(s => s.HeatLevel == "red");
+        decimal greenPct  = scoredTotal > 0 ? Math.Round((decimal)greenCount  / scoredTotal * 100, 2) : 0m;
+        decimal yellowPct = scoredTotal > 0 ? Math.Round((decimal)yellowCount / scoredTotal * 100, 2) : 0m;
+        decimal redPct    = scoredTotal > 0 ? Math.Round((decimal)redCount    / scoredTotal * 100, 2) : 0m;
+
         return Ok(ApiResponse<PortfolioSnapshotVm>.Ok(new PortfolioSnapshotVm(
-            snapshot.Id, snapshot.CreatedAt, snapshot.TotalCustomers,
-            snapshot.GreenCount, snapshot.YellowCount, snapshot.RedCount,
-            snapshot.GreenPct, snapshot.YellowPct, snapshot.RedPct,
-            snapshot.AvgChurnScore, snapshot.AvgPaymentScore, snapshot.AvgMarginScore,
+            snapshot.Id, snapshot.CreatedAt, activeCustomerCount,
+            greenCount, yellowCount, redCount,
+            greenPct, yellowPct, redPct,
+            avgChurn, avgPayment, avgMargin,
             snapshot.SegmentBreakdown)));
     }
 

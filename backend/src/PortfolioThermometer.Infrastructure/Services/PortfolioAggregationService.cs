@@ -28,9 +28,22 @@ public sealed class PortfolioAggregationService : IPortfolioAggregationService
             .FirstOrDefaultAsync(s => s.Id == snapshotId, ct)
             ?? throw new InvalidOperationException($"Snapshot {snapshotId} was not found.");
 
+        var activeCustomerCount = await _db.Customers
+            .CountAsync(customer => customer.IsActive, ct);
+
+        var latestActiveRiskScoreIds = await _db.RiskScores
+            .Where(r => r.Customer.IsActive)
+            .GroupBy(r => r.CustomerId)
+            .Select(group => group
+                .OrderByDescending(score => score.ScoredAt)
+                .ThenByDescending(score => score.Id)
+                .Select(score => score.Id)
+                .First())
+            .ToListAsync(ct);
+
         var snapshotScores = await _db.RiskScores
             .Include(r => r.Customer)
-            .Where(r => r.SnapshotId == snapshotId)
+            .Where(r => latestActiveRiskScoreIds.Contains(r.Id))
             .ToListAsync(ct);
 
         var total = snapshotScores.Count;
@@ -48,7 +61,16 @@ public sealed class PortfolioAggregationService : IPortfolioAggregationService
 
         var segmentBreakdown = BuildSegmentBreakdown(snapshotScores);
 
-        snapshot.TotalCustomers = total;
+        if (activeCustomerCount != total)
+        {
+            _logger.LogWarning(
+                "Dashboard snapshot {SnapshotId} has {ScoredCustomerCount} active customers with risk scores out of {ActiveCustomerCount} active customers.",
+                snapshotId,
+                total,
+                activeCustomerCount);
+        }
+
+        snapshot.TotalCustomers = activeCustomerCount;
         snapshot.GreenCount = greenCount;
         snapshot.YellowCount = yellowCount;
         snapshot.RedCount = redCount;
