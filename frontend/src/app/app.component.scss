@@ -27,7 +27,14 @@
     margin-bottom: 16px;
 
     &-icon {
-      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%);
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
     }
 
     &-text {
@@ -52,6 +59,24 @@
     flex-direction: column;
     gap: 2px;
     padding: 0 12px;
+
+    li {
+      position: relative;
+
+      &:has(.active)::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 55%;
+        min-height: 20px;
+        background: var(--nav-color, #6366f1);
+        border-radius: 0 2px 2px 0;
+        box-shadow: 0 0 8px var(--nav-color, #6366f1);
+      }
+    }
   }
 
   &__link {
@@ -68,17 +93,45 @@
     &:hover {
       background: var(--color-surface-2);
       color: var(--color-text);
+
+      .sidebar__link-icon svg {
+        transform: scale(1.15) rotate(-5deg);
+      }
     }
 
     &.active {
       background: var(--color-surface-2);
       color: var(--color-text);
+
+      .sidebar__link-icon {
+        background: color-mix(in srgb, var(--nav-color) 15%, transparent);
+        box-shadow: 0 0 14px color-mix(in srgb, var(--nav-color) 25%, transparent);
+
+        svg {
+          color: var(--nav-color);
+          filter: drop-shadow(0 0 4px color-mix(in srgb, var(--nav-color) 60%, transparent));
+          transform: scale(1.05);
+        }
+      }
     }
 
     &-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       font-size: 16px;
-      width: 20px;
-      text-align: center;
+      flex-shrink: 0;
+      transition: background var(--duration-fast), box-shadow var(--duration-fast);
+
+      svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        transition: color var(--duration-fast), filter var(--duration-fast), transform var(--duration-fast);
+      }
     }
   }
 }
