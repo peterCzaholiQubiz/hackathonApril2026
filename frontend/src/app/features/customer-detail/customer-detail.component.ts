@@ -66,19 +66,29 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
               class="btn-calculate"
               [disabled]="calculating"
               (click)="calculateRisk()"
+              title="Run AI-powered risk scoring for this customer"
             >
-              {{ calculating ? 'Calculating...' : 'Calculate Risk' }}
+              <span class="btn-calculate__icon">{{ calculating ? '⏳' : '🧠' }}</span>
+              {{ calculating ? 'Calculating…' : 'Calculate AI Risk Score' }}
             </button>
           </div>
         </header>
 
         <div class="detail-page__body">
           @if (risk) {
-            <section class="card">
+            <section class="card card--ai">
+              <div class="ai-section-badge">
+                <span class="ai-section-badge__icon">🧠</span>
+                <span class="ai-section-badge__label">AI Risk Score</span>
+              </div>
               <app-risk-breakdown [risk]="risk" />
             </section>
 
-            <section class="card">
+            <section class="card card--ai">
+              <div class="ai-section-badge">
+                <span class="ai-section-badge__icon">✨</span>
+                <span class="ai-section-badge__label">AI Explanations</span>
+              </div>
               <app-explanation-panel
                 [explanations]="risk.riskExplanations"
                 [overallScore]="risk.overallScore"
@@ -93,6 +103,26 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
             </section>
           }
 
+          <section class="card card--actions card--ai">
+            @if (risk) {
+              <div class="ai-section-badge">
+                <span class="ai-section-badge__icon">⚡</span>
+                <span class="ai-section-badge__label">AI Actions</span>
+              </div>
+              <app-actions-panel
+                [actions]="risk.suggestedActions"
+                [generating]="generatingActions"
+                [error]="actionsError"
+                (generateRequested)="generateActions()"
+              />
+            } @else {
+              <div class="empty-state empty-state--compact">
+                <h2 class="empty-state__title">Suggested actions unavailable</h2>
+                <p class="empty-state__text">Actions will appear here once a risk score is generated for this customer.</p>
+              </div>
+            }
+          </section>
+
           <app-customer-consumption-card [customerId]="customer.id" />
 
           <app-customer-payments-card [customerId]="customer.id" />
@@ -101,29 +131,12 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
             <app-complaints-board [complaints]="complaints" />
           </section>
 
-          <div class="detail-page__bottom">
-            <section class="card card--actions">
-              @if (risk) {
-                <app-actions-panel
-                  [actions]="risk.suggestedActions"
-                  [generating]="generatingActions"
-                  [error]="actionsError"
-                  (generateRequested)="generateActions()"
-                />
-              } @else {
-                <div class="empty-state empty-state--compact">
-                  <h2 class="empty-state__title">Suggested actions unavailable</h2>
-                  <p class="empty-state__text">Actions will appear here once a risk score is generated for this customer.</p>
-                </div>
-              }
-            </section>
-            <section class="card card--timeline">
-              <app-customer-timeline
-                [interactions]="interactions"
-                [complaints]="complaints"
-              />
-            </section>
-          </div>
+          <section class="card card--timeline">
+            <app-customer-timeline
+              [interactions]="interactions"
+              [complaints]="complaints"
+            />
+          </section>
         </div>
       }
     </div>
@@ -159,15 +172,6 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
         gap: 16px;
       }
 
-      &__bottom {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 16px;
-
-        @media (max-width: 900px) {
-          grid-template-columns: 1fr;
-        }
-      }
     }
 
     .back-link {
@@ -211,6 +215,32 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
       &--actions { min-width: 0; }
       &--timeline { min-width: 0; }
       &--empty-state { min-width: 0; }
+
+      &--ai {
+        border-color: rgba(124, 58, 237, 0.3);
+        box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.08), 0 2px 12px rgba(124, 58, 237, 0.07);
+      }
+    }
+
+    .ai-section-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(79, 70, 229, 0.10));
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      border-radius: 999px;
+      padding: 3px 12px 3px 8px;
+      margin-bottom: 18px;
+
+      &__icon { font-size: 14px; line-height: 1; }
+
+      &__label {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #7c3aed;
+      }
     }
 
     .empty-state {
@@ -240,17 +270,23 @@ import { ComplaintsBoardComponent } from './complaints-board/complaints-board.co
     .btn-calculate {
       font-size: 12px;
       font-weight: 700;
-      padding: 4px 14px;
+      padding: 6px 16px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-      background: var(--color-surface-2);
-      color: var(--color-text);
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #fff;
       cursor: pointer;
-      transition: background 150ms;
+      transition: opacity 150ms, box-shadow 150ms;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
 
-      &:hover:not(:disabled) { background: var(--color-surface-3, #e5e7eb); }
+      &:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45); }
       &:disabled { opacity: 0.5; cursor: not-allowed; }
     }
+
+    .btn-calculate__icon { font-size: 14px; }
 
     .skeleton-wrap {
       display: flex;

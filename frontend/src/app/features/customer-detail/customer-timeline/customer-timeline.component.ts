@@ -25,11 +25,17 @@ const SENTIMENT_COLOR: Record<string, string> = {
   imports: [DatePipe],
   template: `
     <div class="timeline">
-      <h2 class="timeline__title">Activity Timeline</h2>
-      @if (entries.length === 0) {
-        <p class="timeline__empty">No interactions or complaints recorded.</p>
-      } @else {
-        <div class="timeline__list">
+      <div class="timeline__header">
+        <h2 class="timeline__title">Activity Timeline</h2>
+        <button class="collapse-btn" (click)="collapsed = !collapsed" [attr.aria-expanded]="!collapsed">
+          {{ collapsed ? '▸' : '▾' }}
+        </button>
+      </div>
+      @if (!collapsed) {
+        @if (entries.length === 0) {
+          <p class="timeline__empty">No interactions or complaints recorded.</p>
+        } @else {
+          <div class="timeline__list">
           @for (entry of entries; track $index; let even = $even) {
             <div class="entry" [class.entry--right]="even">
               <div class="entry__dot"></div>
@@ -72,18 +78,27 @@ const SENTIMENT_COLOR: Record<string, string> = {
             </div>
           }
         </div>
+        }
       }
     </div>
   `,
   styles: [`
     .timeline {
+      &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
       &__title {
         font-size: 13px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--color-text-muted);
-        margin-bottom: 20px;
+        margin: 0;
       }
 
       &__empty {
@@ -194,6 +209,7 @@ export class CustomerTimelineComponent {
     this.buildEntries();
   }
 
+  collapsed = false;
   entries: TimelineEntry[] = [];
   private _interactions: Interaction[] = [];
   private _complaints: Complaint[] = [];

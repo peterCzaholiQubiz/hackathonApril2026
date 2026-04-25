@@ -73,28 +73,38 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         <div>
           <p class="complaints-board__eyebrow">Complaint Radar</p>
           <h2 class="complaints-board__title">Severity lanes for fast triage</h2>
-          <p class="complaints-board__lede">
-            Open issues float to the top, resolved cases stay visible, and the color grouping makes escalation pressure obvious at a glance.
-          </p>
+          @if (!collapsed) {
+            <p class="complaints-board__lede">
+              Open issues float to the top, resolved cases stay visible, and the color grouping makes escalation pressure obvious at a glance.
+            </p>
+          }
         </div>
 
-        <div class="complaints-board__stats">
-          <article class="stat-card stat-card--total">
-            <span class="stat-card__label">Total</span>
-            <strong class="stat-card__value">{{ complaints.length }}</strong>
-          </article>
-          <article class="stat-card stat-card--open">
-            <span class="stat-card__label">Open</span>
-            <strong class="stat-card__value">{{ openCount }}</strong>
-          </article>
-          <article class="stat-card stat-card--resolved">
-            <span class="stat-card__label">Resolved</span>
-            <strong class="stat-card__value">{{ resolvedCount }}</strong>
-          </article>
+        <div class="complaints-board__hero-right">
+          @if (!collapsed) {
+            <div class="complaints-board__stats">
+              <article class="stat-card stat-card--total">
+                <span class="stat-card__label">Total</span>
+                <strong class="stat-card__value">{{ complaints.length }}</strong>
+              </article>
+              <article class="stat-card stat-card--open">
+                <span class="stat-card__label">Open</span>
+                <strong class="stat-card__value">{{ openCount }}</strong>
+              </article>
+              <article class="stat-card stat-card--resolved">
+                <span class="stat-card__label">Resolved</span>
+                <strong class="stat-card__value">{{ resolvedCount }}</strong>
+              </article>
+            </div>
+          }
+          <button class="collapse-btn" (click)="collapsed = !collapsed" [attr.aria-expanded]="!collapsed">
+            {{ collapsed ? '▸' : '▾' }}
+          </button>
         </div>
       </div>
 
-      @if (complaints.length === 0) {
+      @if (!collapsed) {
+        @if (complaints.length === 0) {
         <div class="complaints-board__empty">
           <h3>No complaints on record</h3>
           <p>This customer has a clean slate right now. Severity lanes will populate as soon as complaints arrive from the API.</p>
@@ -146,9 +156,36 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
           }
         </div>
       }
+      }
     </div>
   `,
   styles: [`
+    :host {
+      --_faint-border: rgba(255, 255, 255, 0.08);
+      --_surface-xs: rgba(15, 17, 23, 0.38);
+      --_surface-sm: rgba(15, 17, 23, 0.42);
+      --_surface-md: rgba(15, 17, 23, 0.60);
+      --_surface-lg: rgba(15, 17, 23, 0.86);
+      --_empty-gradient-stop: rgba(26, 29, 39, 0.40);
+      --_eyebrow-on-dark: rgba(255, 255, 255, 0.72);
+      --_inset-highlight: rgba(255, 255, 255, 0.03);
+      --_status-open-text: #fecaca;
+      --_status-resolved-text: #bbf7d0;
+    }
+
+    :host-context([data-theme='light']) {
+      --_faint-border: var(--color-border);
+      --_surface-xs: rgba(0, 0, 0, 0.04);
+      --_surface-sm: rgba(0, 0, 0, 0.04);
+      --_surface-md: rgba(0, 0, 0, 0.05);
+      --_surface-lg: rgba(0, 0, 0, 0.06);
+      --_empty-gradient-stop: rgba(0, 0, 0, 0.04);
+      --_eyebrow-on-dark: var(--color-text-muted);
+      --_inset-highlight: transparent;
+      --_status-open-text: #b91c1c;
+      --_status-resolved-text: #15803d;
+    }
+
     .complaints-board {
       display: flex;
       flex-direction: column;
@@ -159,7 +196,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
         gap: 16px;
         padding: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--_faint-border);
         border-radius: var(--radius-lg);
         background:
           radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 35%),
@@ -170,13 +207,20 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         }
       }
 
+      &__hero-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+      }
+
       &__eyebrow {
         margin: 0 0 8px;
         font-size: 11px;
         font-weight: 800;
         letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--_eyebrow-on-dark);
       }
 
       &__title {
@@ -213,7 +257,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         padding: 32px 24px;
         border: 1px dashed var(--color-border);
         border-radius: var(--radius-lg);
-        background: linear-gradient(180deg, rgba(34, 197, 94, 0.08), rgba(26, 29, 39, 0.4));
+        background: linear-gradient(180deg, rgba(34, 197, 94, 0.08), var(--_empty-gradient-stop));
 
         h3 {
           margin: 0 0 8px;
@@ -231,8 +275,8 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
     .stat-card {
       padding: 16px;
       border-radius: var(--radius-md);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(15, 17, 23, 0.42);
+      border: 1px solid var(--_faint-border);
+      background: var(--_surface-sm);
 
       &__label {
         display: block;
@@ -263,9 +307,9 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
       min-width: 0;
       padding: 18px;
       border-radius: var(--radius-lg);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: linear-gradient(180deg, var(--lane-bg), rgba(15, 17, 23, 0.86));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--_faint-border);
+      background: linear-gradient(180deg, var(--lane-bg), var(--_surface-lg));
+      box-shadow: inset 0 1px 0 var(--_inset-highlight);
 
       &[data-severity='high'] {
         --lane-accent: var(--color-red);
@@ -288,7 +332,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         justify-content: space-between;
         gap: 12px;
         padding-bottom: 14px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--_faint-border);
       }
 
       &__eyebrow {
@@ -333,7 +377,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         margin: 0;
         padding: 18px 16px;
         border-radius: var(--radius-md);
-        background: rgba(15, 17, 23, 0.38);
+        background: var(--_surface-xs);
         color: var(--color-text-muted);
         line-height: 1.6;
       }
@@ -345,8 +389,8 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
       gap: 10px;
       padding: 14px;
       border-radius: var(--radius-md);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(15, 17, 23, 0.6);
+      border: 1px solid var(--_faint-border);
+      background: var(--_surface-md);
 
       &--resolved {
         opacity: 0.82;
@@ -371,7 +415,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
         padding: 4px 10px;
         border-radius: 999px;
         background: rgba(239, 68, 68, 0.18);
-        color: #fecaca;
+        color: var(--_status-open-text);
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 0.08em;
@@ -379,7 +423,7 @@ export function buildComplaintLanes(complaints: Complaint[]): ComplaintLane[] {
 
         &--resolved {
           background: rgba(34, 197, 94, 0.18);
-          color: #bbf7d0;
+          color: var(--_status-resolved-text);
         }
       }
 
@@ -409,6 +453,7 @@ export class ComplaintsBoardComponent {
     this.lanes = buildComplaintLanes(this._complaints);
   }
 
+  collapsed = false;
   lanes: ComplaintLane[] = buildComplaintLanes([]);
   private _complaints: Complaint[] = [];
 

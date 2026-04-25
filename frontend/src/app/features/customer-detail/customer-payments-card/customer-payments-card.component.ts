@@ -26,9 +26,17 @@ type PaymentBucket = {
           <p class="payments-card__eyebrow">Payments</p>
           <h2 class="payments-card__title">Payment behaviour</h2>
         </div>
-        <span class="payments-card__page-size">12 rows per page</span>
+        <div class="payments-card__header-right">
+          @if (!collapsed) {
+            <span class="payments-card__page-size">12 rows per page</span>
+          }
+          <button class="collapse-btn" (click)="collapsed = !collapsed" [attr.aria-expanded]="!collapsed">
+            {{ collapsed ? '▸' : '▾' }}
+          </button>
+        </div>
       </header>
 
+      @if (!collapsed) {
       @if (error) {
         <div class="payments-card__message payments-card__message--error">{{ error }}</div>
       } @else if (loading) {
@@ -107,6 +115,7 @@ type PaymentBucket = {
           </div>
         }
       }
+      }
     </section>
   `,
   styles: [`
@@ -127,6 +136,12 @@ type PaymentBucket = {
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+    }
+
+    .payments-card__header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .payments-card__eyebrow {
@@ -329,6 +344,8 @@ type PaymentBucket = {
 })
 export class CustomerPaymentsCardComponent implements OnChanges {
   @Input({ required: true }) customerId = '';
+
+  collapsed = false;
 
   private readonly customerService = inject(CustomerService);
   private readonly destroyRef = inject(DestroyRef);
