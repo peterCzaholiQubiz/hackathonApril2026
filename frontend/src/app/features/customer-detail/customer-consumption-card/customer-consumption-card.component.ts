@@ -44,9 +44,6 @@ type RangePreset = '6m' | '12m' | '24m' | 'custom';
               <span class="energy-toggle__unit">co3</span>
             </button>
           </div>
-          @if (selectedUnit) {
-            <span class="consumption-card__unit">Unit: {{ displayUnit }}</span>
-          }
         </div>
       </header>
 

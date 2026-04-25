@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using PortfolioThermometer.Api.Configuration;
 using PortfolioThermometer.Api.Middleware;
 using PortfolioThermometer.Core.Interfaces;
 using PortfolioThermometer.Infrastructure.AzureOpenAi;
@@ -25,8 +26,14 @@ builder.Services.AddScoped<IMeterReadGenerationService, MeterReadGenerationServi
 builder.Services.AddScoped<ITestDataGenerationService, TestDataGenerationService>();
 
 // ── Azure OpenAI ──────────────────────────────────────────────────────────────
-builder.Services.Configure<AzureOpenAiOptions>(
-    builder.Configuration.GetSection(AzureOpenAiOptions.SectionName));
+builder.Services.AddOptions<AzureOpenAiOptions>()
+    .Bind(builder.Configuration.GetSection(AzureOpenAiOptions.SectionName))
+    .PostConfigure(options =>
+    {
+        options.ApiKey = AzureOpenAiApiKeyResolver.Resolve(
+            builder.Configuration["OpenAI_Key"],
+            options.ApiKey);
+    });
 builder.Services.AddHttpClient("azureopenai");
 builder.Services.AddSingleton<IAzureOpenAiClient, AzureOpenAiClient>();
 
