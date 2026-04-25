@@ -44,6 +44,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'presentation',
+    loadComponent: () =>
+      import('./features/presentation/presentation.component').then(
+        (m) => m.PresentationComponent
+      ),
+  },
+  {
     path: '**',
     redirectTo: '',
   },
