@@ -68,7 +68,7 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "allowedHosts": [
-              "generous-embrace-production.up.railway.app"
+              "amused-curiosity-production-3ce1.up.railway.app"
             ]
           },
           "configurations": {
