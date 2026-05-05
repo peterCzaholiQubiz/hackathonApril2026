@@ -24,8 +24,17 @@ jobs:
           sed -i "s|https://portfolio-thermometer-api.salmonforest-6411587f.northeurope.azurecontainerapps.io|${{ secrets.BACKEND_API_URL }}|g" src/environments/environment.ts
           npx ng build --configuration production
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Static Web Apps
         run: |
+          TOKEN=$(az staticwebapp secrets list \
+            --name portfolio-thermometer-frontend \
+            --resource-group rg-portfolio-thermometer \
+            --query "properties.apiKey" -o tsv)
           npx @azure/static-web-apps-cli@latest deploy \
             frontend/dist/portfolio-thermometer/browser \
-            --deployment-token ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+            --deployment-token "$TOKEN"
