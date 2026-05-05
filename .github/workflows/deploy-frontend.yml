@@ -33,9 +33,13 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
+            STORAGE_KEY=$(az storage account keys list \
+              --account-name portfoliothermometer \
+              --resource-group rg-portfolio-thermometer \
+              --query "[0].value" -o tsv)
             az storage blob upload-batch \
               --account-name portfoliothermometer \
+              --account-key "$STORAGE_KEY" \
               --source frontend/dist/portfolio-thermometer/browser \
               --destination '$web' \
-              --overwrite \
-              --auth-mode login
+              --overwrite
