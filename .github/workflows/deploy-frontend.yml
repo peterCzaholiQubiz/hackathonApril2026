@@ -13,10 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject backend API URL
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        working-directory: frontend
         run: |
-          sed -i "s|https://portfolio-thermometer-api.salmonforest-6411587f.northeurope.azurecontainerapps.io|${{ secrets.BACKEND_API_URL }}|g" \
-            frontend/src/environments/environment.ts
+          npm ci
+          sed -i "s|https://portfolio-thermometer-api.salmonforest-6411587f.northeurope.azurecontainerapps.io|${{ secrets.BACKEND_API_URL }}|g" src/environments/environment.ts
+          npx ng build --configuration production
 
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
@@ -26,4 +32,4 @@ jobs:
           action: upload
           app_location: frontend
           output_location: dist/portfolio-thermometer/browser
-          app_build_command: npx ng build --configuration production
+          skip_app_build: true
