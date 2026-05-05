@@ -29,12 +29,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Static Web Apps
-        run: |
-          TOKEN=$(az staticwebapp secrets list \
-            --name portfolio-thermometer-frontend \
-            --resource-group rg-portfolio-thermometer \
-            --query "properties.apiKey" -o tsv)
-          npx @azure/static-web-apps-cli@latest deploy \
-            frontend/dist/portfolio-thermometer/browser \
-            --deployment-token "$TOKEN"
+      - name: Upload to Azure Blob Storage
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --account-name portfoliothermometer \
+              --source frontend/dist/portfolio-thermometer/browser \
+              --destination '$web' \
+              --overwrite \
+              --auth-mode login
