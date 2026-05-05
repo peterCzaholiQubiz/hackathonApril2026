@@ -1,0 +1,29 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject backend API URL
+        run: |
+          sed -i "s|https://portfolio-thermometer-api.salmonforest-6411587f.northeurope.azurecontainerapps.io|${{ secrets.BACKEND_API_URL }}|g" \
+            frontend/src/environments/environment.ts
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend
+          output_location: dist/portfolio-thermometer/browser
+          app_build_command: npx ng build --configuration production
